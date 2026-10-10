@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>City Emergency Response System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+
+<!-- SCAN LINE OVERLAY -->
+<div class="scanlines"></div>
+
+<!-- AUTH PAGE -->
+<div id="authPage" class="auth">
+  <div class="auth-bg">
+    <div class="auth-pulse"></div>
+    <div class="auth-pulse delay1"></div>
+    <div class="auth-pulse delay2"></div>
+  </div>
+  <div class="authBox">
+    <div class="auth-logo">
+      <span class="logo-icon">🚨</span>
+      <span class="logo-text">CERS</span>
+    </div>
+    <h2 id="authTitle">Login</h2>
+    <p class="auth-sub">City Emergency Response System</p>
+    <div class="input-group">
+      <span class="input-icon">✉</span>
+      <input type="text" id="username" placeholder="Email Address">
+    </div>
+    <div class="input-group">
+      <span class="input-icon">🔒</span>
+      <input type="password" id="password" placeholder="Password">
+    </div>
+    <button class="submit" onclick="login()">
+      <span>Login</span>
+      <span class="btn-arrow">→</span>
+    </button>
+    <p class="switch-line">
+      <span id="switchText">No account?</span>
+      <a href="#" onclick="toggleAuth()">Signup</a>
+    </p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="hidden">
+
+  <div class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">🚨</div>
+      <div class="brand-text">
+        <h1 id="title">City Emergency Response</h1>
+        <span class="brand-sub">Live Operations Dashboard</span>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <div class="live-badge">
+        <span class="live-dot"></span> LIVE
+      </div>
+      <button class="lang-btn" onclick="toggleLanguage()">EN / हिंदी</button>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="stat-chip fire-chip">🔥 Fire: <span id="count-fire">0</span></div>
+    <div class="stat-chip med-chip">🏥 Medical: <span id="count-medical">0</span></div>
+    <div class="stat-chip acc-chip">🚗 Accident: <span id="count-accident">0</span></div>
+    <div class="stat-chip pol-chip">🚔 Police: <span id="count-police">0</span></div>
+    <div class="stat-chip total-chip">📋 Total: <span id="count-total">0</span></div>
+  </div>
+
+  <div class="container">
+
+    <!-- REPORT FORM -->
+    <div class="card form-card">
+      <div class="card-header">
+        <h3 id="reportTitle">
+          <span class="header-icon">📡</span> Report Emergency
+        </h3>
+        <div class="card-glow"></div>
+      </div>
+
+      <!-- TYPE SELECTOR — visual pills -->
+      <div class="type-label">Emergency Type</div>
+      <div class="type-pills" id="typePills">
+        <button class="type-pill fire-pill active" data-val="Fire" onclick="selectType(this)">🔥 Fire</button>
+        <button class="type-pill med-pill" data-val="Medical" onclick="selectType(this)">🏥 Medical</button>
+        <button class="type-pill acc-pill" data-val="Accident" onclick="selectType(this)">🚗 Accident</button>
+        <button class="type-pill pol-pill" data-val="Police" onclick="selectType(this)">🚔 Police</button>
+        <button class="type-pill min-pill" data-val="Minor" onclick="selectType(this)">⚠️ Minor</button>
+      </div>
+      <input type="hidden" id="type" value="Fire">
+
+      <!-- LOCATION WITH AUTOCOMPLETE -->
+      <div class="field-label">📍 Location</div>
+      <div class="location-wrapper">
+        <input id="location" placeholder="Type a city, area or address..." autocomplete="off"
+          oninput="handleLocationInput(event)" onkeydown="handleLocationKey(event)">
+        <button class="map-btn" onclick="showLocation()" title="Show on map">🗺</button>
+        <div id="locationDropdown" class="location-dropdown hidden"></div>
+      </div>
+
+      <div id="map" style="height:280px; margin-top:10px; display:none;"></div>
+
+      <div class="field-label">📏 Distance from Control Room (km)</div>
+      <input id="distance" placeholder="e.g. 3.5" type="number" step="0.1">
+
+      <div class="field-label">📝 Description</div>
+      <textarea id="description" placeholder="Describe the emergency situation..." rows="3"></textarea>
+
+      <div class="field-label">📷 Attach Photo (optional)</div>
+      <div class="file-drop" id="fileDrop" onclick="document.getElementById('image').click()"
+        ondragover="event.preventDefault()" ondrop="handleDrop(event)">
+        <span class="file-icon">📸</span>
+        <span id="fileLabel">Click or drag & drop image here</span>
+        <input type="file" id="image" accept="image/*" onchange="previewImage()" style="display:none">
+      </div>
+      <img id="imagePreview" src="" alt="Preview"
+        style="display:none;margin-top:10px;width:100%;max-height:180px;object-fit:cover;border-radius:8px;border:2px solid #38bdf8;">
+
+      <button class="submit" id="submitBtn" onclick="reportEmergency()">
+        <span>🚨 Submit Emergency Report</span>
+        <span class="btn-arrow">→</span>
+      </button>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div class="card notif-card">
+      <div class="card-header">
+        <h3 id="notifTitle"><span class="header-icon">📻</span> Live Feed</h3>
+        <div class="card-glow notif-glow"></div>
+      </div>
+      <div id="notifications"></div>
+    </div>
+
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="dashboard">
+    <div class="dashboard-header">
+      <h2 id="dashboardTitle">⚡ Emergency Dashboard</h2>
+      <div class="filter-pills">
+        <button class="filter-pill active" onclick="filterDash('all', this)">All</button>
+        <button class="filter-pill" onclick="filterDash('Pending', this)">Pending</button>
+        <button class="filter-pill" onclick="filterDash('Resolved', this)">Resolved</button>
+      </div>
+    </div>
+    <div class="grid" id="emergencyGrid"></div>
+  </div>
+
+</div>
+
+<script type="module" src="emergency.js"></script>
+</body>
+</html>
