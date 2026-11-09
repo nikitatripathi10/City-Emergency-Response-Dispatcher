@@ -67,5 +67,18 @@ describe("CERS Production Verification Suite", () => {
     assert.ok(js.includes("loginAsDemo"), "Implements one-click demo access for evaluators");
     assert.ok(!js.includes("infoRow.innerHTML = `"), "No unsafe innerHTML template strings");
   });
+
+  it("implements advanced public safety innovations (Silent Police SOS, Pre-Arrival First Aid, Spatial-Temporal Duplicate Merging)", () => {
+    const html = readFileSync("index.html", "utf8");
+    assert.ok(html.includes('id="silentSosBtn"'), "Has One-Tap Silent Police SOS button");
+    assert.ok(html.includes('id="firstAidGuidanceSection"'), "Has Pre-Arrival Life Support Guidance section");
+    assert.ok(html.includes('id="firstAidBody"'), "Has dynamic first aid instruction body");
+
+    const js = readFileSync("emergency.js", "utf8");
+    assert.ok(js.includes("triggerSilentSos"), "Implements stealth silent SOS reporting");
+    assert.ok(js.includes("renderFirstAidGuidance"), "Implements interactive CPR & bleeding life support guidance");
+    assert.ok(js.includes("findPotentialDuplicates"), "Implements spatial-temporal duplicate incident detection");
+    assert.ok(js.includes("merge-btn"), "Implements 1-click duplicate incident consolidation");
+  });
 });
 

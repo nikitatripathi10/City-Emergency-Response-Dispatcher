@@ -816,3 +816,214 @@ body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::aft
   .type-pills { gap: 6px; }
   .type-pill { padding: 6px 10px; font-size: 12px; }
 }
+
+/* ============ 1. SILENT POLICE SOS (STEALTH DURESS TRIGGER) ============ */
+.silent-sos-bar {
+  margin-bottom: 16px;
+}
+.silent-sos-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.18), rgba(159, 18, 57, 0.32));
+  border: 1px solid rgba(244, 63, 94, 0.45);
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+.silent-sos-btn:hover {
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.28), rgba(159, 18, 57, 0.48));
+  border-color: #f43f5e;
+  box-shadow: 0 4px 18px rgba(244, 63, 94, 0.3);
+  transform: translateY(-1px);
+}
+.silent-sos-icon {
+  font-size: 1.8rem;
+}
+.silent-sos-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.silent-sos-text strong {
+  font-family: var(--font-head);
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  color: #fda4af;
+}
+.silent-sos-text small {
+  color: #cbd5e1;
+  font-size: 11px;
+}
+.silent-sos-badge {
+  background: #e11d48;
+  color: #fff;
+  font-family: var(--font-head);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  animation: pulse-border 1.5s infinite;
+}
+
+/* ============ 2. PRE-ARRIVAL FIRST AID GUIDANCE ("THE GOLDEN 5 MINS") ============ */
+.first-aid-card {
+  margin-top: 20px;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: linear-gradient(180deg, rgba(6, 26, 21, 0.6) 0%, rgba(4, 15, 12, 0.75) 100%);
+}
+.life-support-badge {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  font-family: var(--font-head);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 5px;
+  letter-spacing: 1px;
+}
+.first-aid-sub {
+  color: #94a3b8;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.first-aid-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.first-aid-tab {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--font-head);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.first-aid-tab.active {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #fff;
+  border-color: #10b981;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+}
+.first-aid-body {
+  background: rgba(3, 10, 18, 0.6);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  border-radius: 8px;
+  padding: 16px;
+  line-height: 1.6;
+}
+.first-aid-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.first-aid-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.fa-step-num {
+  background: #10b981;
+  color: #04100c;
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.fa-step-content strong {
+  color: #f1f5f9;
+  display: block;
+  font-size: 13px;
+}
+.fa-step-content p {
+  color: #94a3b8;
+  font-size: 12px;
+  margin: 2px 0 0;
+}
+.cpr-metronome-box {
+  margin-top: 14px;
+  padding: 12px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px dashed rgba(16, 185, 129, 0.4);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cpr-beat-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 10px #ef4444;
+  animation: cpr-pulse 0.55s infinite ease-in-out;
+}
+@keyframes cpr-pulse {
+  0% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.4); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.7; }
+}
+
+/* ============ 3. DUPLICATE INCIDENT DETECTION & 1-CLICK MERGE ============ */
+.duplicate-banner {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #fcd34d;
+}
+.duplicate-banner-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+.merge-btn {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 6px 10px;
+  font-family: var(--font-head);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  align-self: flex-start;
+}
+.merge-btn:hover {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+}
+.merged-badge {
+  background: rgba(148, 163, 184, 0.2);
+  border: 1px dashed rgba(148, 163, 184, 0.5);
+  color: #cbd5e1;
+  font-size: 11px;
+  padding: 3px 6px;
+  border-radius: 4px;
+}

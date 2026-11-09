@@ -176,6 +176,18 @@
   <div id="citizenPortalView">
     <div class="container">
 
+      <!-- SILENT POLICE SOS (STEALTH TRIGGER FOR PERSONAL DURESS / INTRUDER) -->
+      <div class="silent-sos-bar">
+        <button type="button" id="silentSosBtn" class="silent-sos-btn" title="One-tap silent police alert for domestic violence, intruder or hostage danger">
+          <span class="silent-sos-icon">🔕</span>
+          <span class="silent-sos-text">
+            <strong>1-TAP SILENT POLICE SOS (STEALTH TRIGGER)</strong>
+            <small>Tap if in immediate danger and cannot speak safely. Dispatches police to your GPS silently.</small>
+          </span>
+          <span class="silent-sos-badge">SILENT DURESS</span>
+        </button>
+      </div>
+
       <!-- REPORT FORM -->
       <form id="reportForm" class="card form-card" novalidate>
         <div class="card-header">
@@ -277,6 +289,25 @@
             <h3><span class="header-icon" aria-hidden="true">📋</span> My Reports &amp; Live Tracking</h3>
           </div>
           <div id="citizenTrackingList" class="citizen-tracking-grid"></div>
+        </section>
+
+        <!-- PRE-ARRIVAL FIRST AID GUIDANCE ("THE GOLDEN 5 MINUTES") -->
+        <section class="card first-aid-card" id="firstAidGuidanceSection" aria-label="Pre-Arrival Life Support Guidance">
+          <div class="card-header">
+            <h3>
+              <span class="header-icon" aria-hidden="true">🩺</span>
+              <span>Pre-Arrival Guidance ("The Golden 5 Minutes")</span>
+            </h3>
+            <span class="life-support-badge">LIFE SAVING</span>
+          </div>
+          <p class="first-aid-sub">Take these immediate actions while emergency units are en route to you:</p>
+          <div class="first-aid-tabs" role="tablist" aria-label="First aid protocols">
+            <button type="button" class="first-aid-tab active" data-aid="cpr">🫀 Hands-Only CPR</button>
+            <button type="button" class="first-aid-tab" data-aid="bleeding">🩸 Severe Bleeding</button>
+            <button type="button" class="first-aid-tab" data-aid="burns">🔥 Severe Burns</button>
+            <button type="button" class="first-aid-tab" data-aid="choking">🗣️ Choking / Airway</button>
+          </div>
+          <div id="firstAidBody" class="first-aid-body"></div>
         </section>
       </div>
 

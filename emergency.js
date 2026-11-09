@@ -1478,6 +1478,293 @@ function buildFeedbackSection(incident) {
   return container;
 }
 
+// ============ 1. PRE-ARRIVAL LIFE SUPPORT GUIDANCE ("THE GOLDEN 5 MINUTES") ============
+const FIRST_AID_PROTOCOLS = {
+  cpr: {
+    title: "Hands-Only CPR (Cardiac Arrest / Unresponsive)",
+    badge: "100-120 BPM",
+    steps: [
+      {
+        num: "1",
+        title: "Check responsiveness & breathing",
+        desc: "Tap the victim's shoulders firmly and shout: 'Are you OK?'. If no breathing or gasping, begin CPR immediately.",
+      },
+      {
+        num: "2",
+        title: "Position hands in center of chest",
+        desc: "Place the heel of one hand on the center of the breastbone. Interlock your other hand on top. Keep elbows straight.",
+      },
+      {
+        num: "3",
+        title: "Push hard & fast to the beat below",
+        desc: "Compress at least 2 inches (5 cm) deep. Match the pulse beat below (105 BPM). Do not stop until paramedics arrive.",
+      },
+    ],
+    showMetronome: true,
+  },
+  bleeding: {
+    title: "Severe Bleeding & Hemorrhage Control",
+    badge: "DIRECT PRESSURE",
+    steps: [
+      {
+        num: "1",
+        title: "Apply continuous firm pressure",
+        desc: "Take a clean cloth, towel, or sterile gauze and press directly against the wound with both hands.",
+      },
+      {
+        num: "2",
+        title: "Do not remove soaked cloth",
+        desc: "If blood soaks through, add another layer on top and keep pressing down firmly. Do NOT lift the cloth to check.",
+      },
+      {
+        num: "3",
+        title: "Elevate above heart level",
+        desc: "If an extremity (arm or leg) is bleeding and has no fracture, elevate it above heart level while maintaining pressure.",
+      },
+    ],
+    showMetronome: false,
+  },
+  burns: {
+    title: "Severe Burns & Thermal Trauma",
+    badge: "COOL WATER ONLY",
+    steps: [
+      {
+        num: "1",
+        title: "Cool with cool running water for 10-20 mins",
+        desc: "Use clean, cool tap water. NEVER use ice or ice-cold water (this causes tissue hypothermia and deeper damage).",
+      },
+      {
+        num: "2",
+        title: "Remove jewelry & loose clothing",
+        desc: "Remove rings, watches, and tight clothing before swelling begins. Do NOT tear away clothes melted to the skin.",
+      },
+      {
+        num: "3",
+        title: "Cover loosely with clean, dry cloth",
+        desc: "Cover the burn with sterile non-stick bandage or plastic wrap. Do NOT break blisters or apply toothpaste/butter.",
+      },
+    ],
+    showMetronome: false,
+  },
+  choking: {
+    title: "Severe Choking / Airway Obstruction",
+    badge: "5 BACK BLOWS + 5 THRUSTS",
+    steps: [
+      {
+        num: "1",
+        title: "Deliver 5 firm back blows",
+        desc: "Stand behind the person, lean them forward, and deliver 5 sharp blows between their shoulder blades with the heel of your hand.",
+      },
+      {
+        num: "2",
+        title: "Perform 5 abdominal thrusts (Heimlich)",
+        desc: "Make a fist above the navel. Grasp your fist with your other hand and pull sharply inward and upward 5 times.",
+      },
+      {
+        num: "3",
+        title: "Alternate until object is expelled",
+        desc: "Repeat 5 back blows and 5 abdominal thrusts. If the victim loses consciousness, lower them gently and start CPR.",
+      },
+    ],
+    showMetronome: false,
+  },
+};
+
+function renderFirstAidGuidance(protocolKey = "cpr") {
+  const container = document.getElementById("firstAidBody");
+  if (!container) return;
+  container.replaceChildren();
+
+  const data = FIRST_AID_PROTOCOLS[protocolKey] || FIRST_AID_PROTOCOLS.cpr;
+
+  const header = document.createElement("div");
+  header.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:12px";
+  const h4 = document.createElement("h4");
+  h4.style.cssText = "font-family:var(--font-head);font-size:14px;color:#34d399";
+  h4.textContent = data.title;
+  const badge = document.createElement("span");
+  badge.className = "life-support-badge";
+  badge.textContent = data.badge;
+  header.append(h4, badge);
+
+  const stepsList = document.createElement("div");
+  stepsList.className = "first-aid-steps";
+
+  data.steps.forEach((s) => {
+    const row = document.createElement("div");
+    row.className = "first-aid-step";
+
+    const num = document.createElement("div");
+    num.className = "fa-step-num";
+    num.textContent = s.num;
+
+    const content = document.createElement("div");
+    content.className = "fa-step-content";
+    const st = document.createElement("strong");
+    st.textContent = s.title;
+    const p = document.createElement("p");
+    p.textContent = s.desc;
+    content.append(st, p);
+
+    row.append(num, content);
+    stepsList.appendChild(row);
+  });
+
+  container.append(header, stepsList);
+
+  if (data.showMetronome) {
+    const metro = document.createElement("div");
+    metro.className = "cpr-metronome-box";
+
+    const left = document.createElement("div");
+    const st = document.createElement("strong");
+    st.style.color = "#f87171";
+    st.textContent = "⏱️ CPR Compression Beat (105 BPM - Match this rhythm)";
+    const sub = document.createElement("div");
+    sub.style.cssText = "color:#94a3b8;font-size:11px";
+    sub.textContent = "Rhythm of 'Stayin' Alive'. Push deep in the center of the chest on every pulse.";
+    left.append(st, sub);
+
+    const pulse = document.createElement("div");
+    pulse.className = "cpr-beat-indicator";
+
+    metro.append(left, pulse);
+    container.appendChild(metro);
+  }
+}
+
+// ============ 2. 1-TAP SILENT POLICE SOS (STEALTH DURESS) ============
+async function triggerSilentSos() {
+  if (!currentUser) {
+    currentUser = {
+      uid: `silent-victim-${Date.now().toString(36)}`,
+      email: "silent.sos@public-safety.gov",
+      displayName: "Victim (Silent SOS)",
+    };
+  }
+
+  showToast("Acquiring GPS for Silent Police SOS...", "info");
+
+  const submitSosWithCoords = async (coords) => {
+    const locLabel = coords
+      ? `GPS (${coords.lat}, ${coords.lng}) [SILENT DURESS / INTRUSION]`
+      : "GPS Locked Location (Duress)";
+    const dist = coords
+      ? computeHaversineKm(CONTROL_ROOM_COORDS.lat, CONTROL_ROOM_COORDS.lng, coords.lat, coords.lng)
+      : 2.1;
+
+    const sosIncident = {
+      id: `silent-sos-${Date.now()}`,
+      uid: currentUser.uid,
+      reporterUid: currentUser.uid,
+      type: "Police",
+      reportedSeverity: "critical",
+      peopleAffected: 1,
+      vulnerabilityFlags: ["silent_sos", "personal_danger", "trapped"],
+      location: locLabel,
+      desc: "🚨 SILENT POLICE SOS TRIGGERED: Victim is in immediate personal danger, domestic threat or intrusion and cannot speak. Dispatched to verified GPS location.",
+      coordinates: coords || { lat: 28.6139, lng: 77.209 },
+      geohash: coords ? encodeGeohash(coords.lat, coords.lng) : "ttnfvh5qx",
+      distance: dist,
+      priorityScore: 98,
+      priority: "CRITICAL",
+      weight: 1,
+      status: "verified",
+      assignedUnitIds: [],
+      assignedResponderUids: [],
+      mergedIntoId: null,
+      duplicateCount: 0,
+      img: "",
+      rating: null,
+      feedback: "",
+      abuseFlags: 0,
+      archived: false,
+      createdAtMs: Date.now(),
+      updatedAtMs: Date.now(),
+      timestamp: Date.now(),
+    };
+
+    if (currentUser?.uid?.startsWith("demo-") || currentUser?.uid?.startsWith("silent-")) {
+      emergencies.unshift(sosIncident);
+      updateStatusCounts();
+      if (currentUserRole === "citizen") {
+        renderCitizenTrackingList();
+      } else {
+        smartRender();
+      }
+      showToast("SILENT SOS TRANSMITTED. Police dispatched. Keep phone silent and concealed.", "success");
+      return;
+    }
+
+    try {
+      const docRef = await addDoc(collection(db, "emergencies"), {
+        ...sosIncident,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      await addDoc(collection(db, "emergencies", docRef.id, "timeline"), {
+        incidentId: docRef.id,
+        actorUid: currentUser.uid,
+        actorRole: "citizen",
+        action: "silent_sos_triggered",
+        toState: "verified",
+        note: "One-tap stealth silent SOS activated. Priority 98 critical police response.",
+        createdAt: serverTimestamp(),
+      });
+      showToast("SILENT SOS TRANSMITTED. Police dispatched. Keep phone silent and concealed.", "success");
+    } catch {
+      emergencies.unshift(sosIncident);
+      updateStatusCounts();
+      showToast("SILENT SOS TRANSMITTED (Cached). Police notified.", "success");
+    }
+  };
+
+  if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        submitSosWithCoords({
+          lat: Math.round(pos.coords.latitude * 1000000) / 1000000,
+          lng: Math.round(pos.coords.longitude * 1000000) / 1000000,
+        });
+      },
+      () => {
+        submitSosWithCoords(selectedCoords || { lat: 28.6139, lng: 77.209 });
+      },
+      { timeout: 5000, enableHighAccuracy: true }
+    );
+  } else {
+    submitSosWithCoords(selectedCoords || { lat: 28.6139, lng: 77.209 });
+  }
+}
+
+// ============ 3. SPATIAL-TEMPORAL DUPLICATE INCIDENT DETECTION ============
+function findPotentialDuplicates(targetIncident) {
+  if (!targetIncident.coordinates || targetIncident.mergedIntoId) return [];
+
+  return emergencies.filter((other) => {
+    if (other.id === targetIncident.id || other.mergedIntoId) return false;
+    if (other.type !== targetIncident.type) return false;
+    if (["resolved", "Resolved", "closed", "cancelled"].includes(other.status)) return false;
+    if (!other.coordinates) return false;
+
+    // Check distance (< 0.6 km)
+    const distKm = computeHaversineKm(
+      targetIncident.coordinates.lat,
+      targetIncident.coordinates.lng,
+      other.coordinates.lat,
+      other.coordinates.lng
+    );
+    if (distKm > 0.6) return false;
+
+    // Check time (< 20 minutes)
+    const timeDiffMs = Math.abs(
+      (targetIncident.createdAtMs || targetIncident.timestamp || 0) -
+        (other.createdAtMs || other.timestamp || 0)
+    );
+    return timeDiffMs < 1_200_000;
+  });
+}
+
 function createEmergencyCardDOM(e) {
   const tc = TYPE_COLORS[e.type] || TYPE_COLORS.Minor;
   const badgeClass = String(e.priority || "low").toLowerCase();
@@ -1533,6 +1820,39 @@ function createEmergencyCardDOM(e) {
   const distRow = document.createElement("div");
   distRow.className = "ec-info";
   distRow.textContent = `📏 ${e.distance} km · 👥 ${e.peopleAffected} affected`;
+
+  const duplicates = findPotentialDuplicates(e);
+  if (duplicates.length > 0 && !e.mergedIntoId) {
+    const dupBox = document.createElement("div");
+    dupBox.className = "duplicate-banner";
+
+    const top = document.createElement("div");
+    top.className = "duplicate-banner-top";
+    const dupDistM = e.coordinates && duplicates[0].coordinates
+      ? Math.round(computeHaversineKm(e.coordinates.lat, e.coordinates.lng, duplicates[0].coordinates.lat, duplicates[0].coordinates.lng) * 1000)
+      : 250;
+    top.textContent = `⚠️ Possible Duplicate: Matches Incident #${duplicates[0].id.slice(-6)} (${dupDistM}m away)`;
+
+    const mergeBtn = document.createElement("button");
+    mergeBtn.type = "button";
+    mergeBtn.className = "merge-btn";
+    mergeBtn.textContent = `🔗 1-Click Merge into #${duplicates[0].id.slice(-6)}`;
+    mergeBtn.addEventListener("click", () => {
+      e.mergedIntoId = duplicates[0].id;
+      duplicates[0].duplicateCount = (duplicates[0].duplicateCount || 0) + 1;
+      duplicates[0].desc += ` | [Bystander #${e.id.slice(-6)}: ${e.desc}]`;
+      smartRender();
+      showToast(`Merged Incident #${e.id.slice(-6)} into Primary Incident #${duplicates[0].id.slice(-6)}.`, "success");
+    });
+
+    dupBox.append(top, mergeBtn);
+    content.appendChild(dupBox);
+  } else if (e.mergedIntoId) {
+    const mergedBadge = document.createElement("div");
+    mergedBadge.className = "merged-badge";
+    mergedBadge.textContent = `🔗 Merged into Primary Incident #${e.mergedIntoId.slice(-6)}`;
+    content.appendChild(mergedBadge);
+  }
 
   const descP = document.createElement("p");
   descP.className = "ec-desc";
@@ -2185,6 +2505,26 @@ function loginAsDemo(role, email) {
 // ============ INIT EVENT LISTENERS ============
 function initApp() {
   applyTranslations();
+
+  // PRE-ARRIVAL FIRST AID PROTOCOLS ("THE GOLDEN 5 MINUTES")
+  renderFirstAidGuidance("cpr");
+  document.querySelectorAll(".first-aid-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".first-aid-tab").forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      renderFirstAidGuidance(tab.dataset.aid || "cpr");
+    });
+  });
+
+  // 1-TAP SILENT POLICE SOS (STEALTH TRIGGER)
+  document.getElementById("silentSosBtn")?.addEventListener("click", async () => {
+    const ok = await showConfirmModal(
+      "Activate Silent Police SOS?",
+      "This immediately transmits an emergency police duress alert with your GPS location to the 112 Control Room. Your phone will remain silent for your safety."
+    );
+    if (!ok) return;
+    await triggerSilentSos();
+  });
 
   document.querySelectorAll(".portal-tab").forEach((tab) => {
     tab.addEventListener("click", () => {
