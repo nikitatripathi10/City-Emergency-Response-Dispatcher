@@ -1013,6 +1013,17 @@ function showLocationCoords(lat, lng, label) {
       maxZoom: 19,
       attribution: "© OpenStreetMap",
     }).addTo(pickerMap);
+    pickerMap.on("click", (e) => {
+      const pos = e.latlng;
+      selectedCoords = {
+        lat: Math.round(pos.lat * 1000000) / 1000000,
+        lng: Math.round(pos.lng * 1000000) / 1000000,
+      };
+      if (pickerMarker) {
+        pickerMarker.setLatLng(pos);
+      }
+      updateComputedDistanceDisplay(selectedCoords);
+    });
   } else {
     pickerMap.setView([numLat, numLng], 15);
   }
