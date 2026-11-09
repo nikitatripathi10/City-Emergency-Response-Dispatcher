@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -48,15 +48,27 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
+// ============ HTML ESCAPE HELPER ============
+function escapeHTML(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // ============ AUTH TOGGLE ============
 function toggleAuth() {
   signupMode = !signupMode;
   document.getElementById("authTitle").innerText = signupMode ? "Signup" : "Login";
-  document.querySelector(".submit").innerText = signupMode ? "Create Account →" : "Login →";
+  document.querySelector("#authPage .submit").innerHTML = signupMode
+    ? "<span>Create Account</span><span class='btn-arrow'>→</span>"
+    : "<span>Login</span><span class='btn-arrow'>→</span>";
   document.getElementById("switchText").innerText = signupMode ? "Have account?" : "No account?";
 }
 
-// ============ LOGIN / SIGNUP ============
+// ============ LOGIN / SIGNUP / LOGOUT ============
 function login() {
   const email = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value;
@@ -69,6 +81,10 @@ function login() {
     signInWithEmailAndPassword(auth, email, password)
       .catch((err) => alert("Login Error: " + err.message));
   }
+}
+
+function logout() {
+  signOut(auth).catch((err) => alert("Logout Error: " + err.message));
 }
 
 // ============ TYPE PILL SELECTION ============
@@ -270,12 +286,14 @@ function loadEmergencies() {
 
 // ============ STATUS COUNT BAR ============
 function updateStatusCounts() {
-  const counts = { Fire: 0, Medical: 0, Accident: 0, Police: 0 };
+  const counts = { Fire: 0, Medical: 0, Accident: 0, Police: 0, Minor: 0 };
   emergencies.forEach(e => { if (counts[e.type] !== undefined) counts[e.type]++; });
   document.getElementById("count-fire").textContent = counts.Fire;
   document.getElementById("count-medical").textContent = counts.Medical;
   document.getElementById("count-accident").textContent = counts.Accident;
   document.getElementById("count-police").textContent = counts.Police;
+  const minorEl = document.getElementById("count-minor");
+  if (minorEl) minorEl.textContent = counts.Minor;
   document.getElementById("count-total").textContent = emergencies.length;
 }
 
@@ -296,6 +314,10 @@ async function reportEmergency() {
   const file = document.getElementById("image").files[0];
 
   if (!location || !distance || !desc) { alert("Please fill all fields."); return; }
+  if (isNaN(Number(distance)) || Number(distance) < 0) {
+    alert("Please enter a valid non-negative distance.");
+    return;
+  }
 
   const btn = document.getElementById("submitBtn");
   btn.innerHTML = "<span>⏳ Submitting...</span>";
@@ -352,16 +374,29 @@ function smartRender() {
     ? emergencies
     : emergencies.filter(e => e.status === dashFilter);
 
-  if (filtered.length === 0) {
-    grid.innerHTML = "<p style='color:#64748b;padding:20px;font-size:14px'>No emergencies match this filter.</p>";
-    updateNotifications();
-    return;
-  }
-
   // Remove deleted cards
   Array.from(grid.querySelectorAll(".emergency-card")).forEach(card => {
     if (!emergencies.find(e => e.id === card.dataset.id)) grid.removeChild(card);
   });
+
+  const existingEmptyMsg = grid.querySelector(".empty-state-msg");
+
+  if (filtered.length === 0) {
+    Array.from(grid.querySelectorAll(".emergency-card")).forEach(card => {
+      card.style.display = "none";
+    });
+    if (!existingEmptyMsg) {
+      const p = document.createElement("p");
+      p.className = "empty-state-msg";
+      p.style.cssText = "color:#64748b;padding:20px;font-size:14px";
+      p.textContent = "No emergencies match this filter.";
+      grid.appendChild(p);
+    }
+    updateNotifications();
+    return;
+  }
+
+  if (existingEmptyMsg) existingEmptyMsg.remove();
 
   // Hide cards not in filter, show those that are
   Array.from(grid.querySelectorAll(".emergency-card")).forEach(card => {
@@ -369,7 +404,7 @@ function smartRender() {
     card.style.display = show ? "" : "none";
   });
 
-  filtered.forEach((e, i) => {
+  filtered.forEach((e) => {
     let existingCard = grid.querySelector(`[data-id="${e.id}"]`);
 
     if (existingCard) {
@@ -408,6 +443,7 @@ function smartRender() {
           feedbackDiv.innerHTML = feedbackHTML(emergencies.indexOf(e));
         }
       }
+      grid.appendChild(existingCard);
     } else {
       // Create new card
       const tc = TYPE_COLORS[e.type] || { hex: "#555", emoji: "🚨", class: "banner-minor" };
@@ -416,11 +452,18 @@ function smartRender() {
       card.className = "emergency-card";
       card.dataset.id = e.id;
 
+      const safeType = escapeHTML(e.type);
+      const safeLocation = escapeHTML(e.location);
+      const safeDesc = escapeHTML(e.desc);
+      const safeDistance = escapeHTML(e.distance);
+      const safePriority = escapeHTML(e.priority);
+      const safeStatus = escapeHTML(e.status);
+
       const imageSection = e.img && e.img.startsWith("data:")
-        ? `<img src="${e.img}" alt="${e.type}">`
+        ? `<img src="${e.img}" alt="${safeType}">`
         : `<div class="type-banner-placeholder" style="background: linear-gradient(135deg, ${tc.hex}22, ${tc.hex}44);">
              <span style="font-size:2.5rem">${tc.emoji}</span>
-             <span style="font-family:var(--font-head);font-size:1.1rem;font-weight:700;color:${tc.hex};letter-spacing:2px">${e.type.toUpperCase()}</span>
+             <span style="font-family:var(--font-head);font-size:1.1rem;font-weight:700;color:${tc.hex};letter-spacing:2px">${safeType.toUpperCase()}</span>
            </div>`;
 
       const statusClass = e.status === "Pending" ? "status-pending" : "status-resolved";
@@ -432,13 +475,13 @@ function smartRender() {
         ${imageSection}
         <div class="emergency-content">
           <div class="ec-header">
-            <span class="ec-type" style="color:${tc.hex}">${tc.emoji} ${e.type}</span>
-            <span class="badge ${badgeClass}">${e.priority}</span>
+            <span class="ec-type" style="color:${tc.hex}">${tc.emoji} ${safeType}</span>
+            <span class="badge ${badgeClass}">${safePriority}</span>
           </div>
-          <div class="ec-info"><span>📍</span><span><strong>${e.location}</strong></span></div>
-          <div class="ec-info"><span>📏</span><span><strong>${e.distance} km</strong> from control</span></div>
-          <p class="ec-desc">${e.desc}</p>
-          <div class="status ${statusClass}">${statusIcon} <b>${e.status}</b></div>
+          <div class="ec-info"><span>📍</span><span><strong>${safeLocation}</strong></span></div>
+          <div class="ec-info"><span>📏</span><span><strong>${safeDistance} km</strong> from control</span></div>
+          <p class="ec-desc">${safeDesc}</p>
+          <div class="status ${statusClass}">${statusIcon} <b>${safeStatus}</b></div>
           ${e.status === "Pending"
             ? `<button class="resolveBtn" onclick="window.resolve('${e.id}')">✔ Mark as Resolved</button>`
             : `<div class="feedbackDiv">${feedbackHTML(globalIdx)}</div>`}
@@ -471,8 +514,8 @@ function feedbackHTML(i) {
   const e = emergencies[i];
   if (!e) return "";
   if (e.rating) {
-    return `<p>⭐ Rating: <strong>${e.rating}/5</strong></p>
-      <p style="margin-top:4px;color:#94a3b8;font-size:12px">${e.feedback || "No feedback given"}</p>`;
+    return `<p>⭐ Rating: <strong>${escapeHTML(e.rating)}/5</strong></p>
+      <p style="margin-top:4px;color:#94a3b8;font-size:12px">${escapeHTML(e.feedback || "No feedback given")}</p>`;
   }
   return `<p style="font-weight:600;margin-bottom:6px">Rate the response:</p>
     <select onchange="window.setRating(${i}, this.value)">
@@ -506,15 +549,16 @@ function updateNotifications() {
     panel.innerHTML = "<p style='color:#64748b;font-size:13px'>No recent emergencies.</p>";
     return;
   }
-  emergencies.slice(0, 5).forEach(e => {
+  const recent = [...emergencies].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  recent.slice(0, 5).forEach(e => {
     const tc = TYPE_COLORS[e.type] || {};
     const div = document.createElement("div");
-    div.className = `notification notif-${e.type.toLowerCase()} notif-default`;
+    div.className = `notification notif-${(e.type || "minor").toLowerCase()} notif-default`;
     const ago = timeAgo(e.timestamp);
     div.innerHTML = `
       <div>
-        <div>${tc.emoji || "🚨"} <strong>${e.type}</strong> at ${e.location}</div>
-        <div class="notif-time">${e.priority} Priority · ${ago}</div>
+        <div>${tc.emoji || "🚨"} <strong>${escapeHTML(e.type)}</strong> at ${escapeHTML(e.location)}</div>
+        <div class="notif-time">${escapeHTML(e.priority)} Priority · ${ago}</div>
       </div>`;
     panel.appendChild(div);
   });
@@ -532,22 +576,22 @@ function timeAgo(ts) {
 function toggleLanguage() {
   lang = lang === "en" ? "hi" : "en";
   const texts = {
-    en: { title: "City Emergency Response", reportTitle: "📡 Report Emergency",
-          dashboardTitle: "⚡ Emergency Dashboard", notifTitle: "📻 Live Feed" },
-    hi: { title: "शहर आपातकालीन प्रणाली", reportTitle: "📡 आपातकाल रिपोर्ट करें",
-          dashboardTitle: "⚡ आपातकाल डैशबोर्ड", notifTitle: "📻 नवीनतम घटनाएँ" }
+    en: { title: "City Emergency Response", reportTitle: "Report Emergency",
+          dashboardTitle: "⚡ Emergency Dashboard", notifTitle: "Live Feed" },
+    hi: { title: "शहर आपातकालीन प्रणाली", reportTitle: "आपातकाल रिपोर्ट करें",
+          dashboardTitle: "⚡ आपातकाल डैशबोर्ड", notifTitle: "नवीनतम घटनाएँ" }
   };
   const t = texts[lang];
   document.getElementById("title").innerText = t.title;
-  document.getElementById("title").innerText = t.title;
-  document.getElementById("reportTitle").innerHTML = `<span class="header-icon"></span>${t.reportTitle}`;
+  document.getElementById("reportTitle").innerHTML = `<span class="header-icon">📡</span> ${t.reportTitle}`;
   document.getElementById("dashboardTitle").innerText = t.dashboardTitle;
-  document.getElementById("notifTitle").innerHTML = `<span class="header-icon"></span>${t.notifTitle}`;
+  document.getElementById("notifTitle").innerHTML = `<span class="header-icon">📻</span> ${t.notifTitle}`;
 }
 
 // ============ EXPOSE GLOBALLY ============
 window.toggleAuth = toggleAuth;
 window.login = login;
+window.logout = logout;
 window.selectType = selectType;
 window.reportEmergency = reportEmergency;
 window.resolve = resolve;
@@ -561,4 +605,3 @@ window.deleteEmergency = deleteEmergency;
 window.filterDash = filterDash;
 window.handleLocationInput = handleLocationInput;
 window.handleLocationKey = handleLocationKey;
-  

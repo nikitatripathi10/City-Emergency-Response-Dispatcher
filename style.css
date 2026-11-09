@@ -181,6 +181,7 @@ button.submit:active { transform: translateY(0); }
   transition: border-color .2s, background .2s;
 }
 .lang-btn:hover { border-color: var(--accent); background: rgba(56,189,248,0.08); }
+.logout-btn:hover { border-color: #f87171; color: #f87171; background: rgba(239,68,68,0.1); }
 
 /* ============ STATUS BAR ============ */
 .status-bar {
@@ -199,6 +200,7 @@ button.submit:active { transform: translateY(0); }
 .med-chip     { color: var(--medical); border-color: var(--medical); background: var(--medical-glow); }
 .acc-chip     { color: var(--accident);border-color: var(--accident);background: var(--accident-glow); }
 .pol-chip     { color: var(--police);  border-color: var(--police);  background: var(--police-glow); }
+.min-chip     { color: var(--minor);   border-color: var(--minor);   background: var(--minor-glow); }
 .total-chip   { color: var(--accent);  border-color: var(--accent);  background: rgba(56,189,248,0.1); }
 
 /* ============ LAYOUT ============ */
