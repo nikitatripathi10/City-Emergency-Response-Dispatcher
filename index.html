@@ -4,55 +4,73 @@
 <meta charset="UTF-8">
 <title>City Emergency Response System</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://firebasestorage.googleapis.com https://unpkg.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://nominatim.openstreetmap.org https://photon.komoot.io; object-src 'none'; base-uri 'self';">
 <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous"/>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet" crossorigin="anonymous">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
 </head>
 <body>
 
 <!-- SCAN LINE OVERLAY -->
-<div class="scanlines"></div>
+<div class="scanlines" aria-hidden="true"></div>
+
+<!-- ARIA LIVE TOAST CONTAINER -->
+<div id="toastContainer" class="toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<!-- ACCESSIBLE CONFIRMATION MODAL -->
+<dialog id="confirmDialog" class="confirm-dialog" aria-labelledby="confirmDialogTitle" aria-describedby="confirmDialogDesc">
+  <div class="confirm-dialog-box">
+    <h3 id="confirmDialogTitle" class="confirm-title">Confirm Action</h3>
+    <p id="confirmDialogDesc" class="confirm-desc"></p>
+    <div class="confirm-actions">
+      <button type="button" id="confirmCancelBtn" class="lang-btn">Cancel</button>
+      <button type="button" id="confirmOkBtn" class="submit confirm-danger-btn">Confirm</button>
+    </div>
+  </div>
+</dialog>
 
 <!-- AUTH PAGE -->
-<div id="authPage" class="auth">
-  <div class="auth-bg">
+<main id="authPage" class="auth">
+  <div class="auth-bg" aria-hidden="true">
     <div class="auth-pulse"></div>
     <div class="auth-pulse delay1"></div>
     <div class="auth-pulse delay2"></div>
   </div>
-  <div class="authBox">
+  <form id="authForm" class="authBox" novalidate>
     <div class="auth-logo">
-      <span class="logo-icon">🚨</span>
+      <span class="logo-icon" aria-hidden="true">🚨</span>
       <span class="logo-text">CERS</span>
     </div>
     <h2 id="authTitle">Login</h2>
     <p class="auth-sub">City Emergency Response System</p>
     <div class="input-group">
-      <span class="input-icon">✉</span>
-      <input type="text" id="username" placeholder="Email Address">
+      <label for="username" class="sr-only">Email Address</label>
+      <span class="input-icon" aria-hidden="true">✉</span>
+      <input type="email" id="username" placeholder="Email Address" autocomplete="email" required>
     </div>
     <div class="input-group">
-      <span class="input-icon">🔒</span>
-      <input type="password" id="password" placeholder="Password">
+      <label for="password" class="sr-only">Password</label>
+      <span class="input-icon" aria-hidden="true">🔒</span>
+      <input type="password" id="password" placeholder="Password" autocomplete="current-password" minlength="6" required>
     </div>
-    <button class="submit" onclick="login()">
-      <span>Login</span>
-      <span class="btn-arrow">→</span>
+    <button type="submit" class="submit" id="authSubmitBtn">
+      <span id="authSubmitText">Login</span>
+      <span class="btn-arrow" aria-hidden="true">→</span>
     </button>
     <p class="switch-line">
       <span id="switchText">No account?</span>
-      <a href="#" onclick="toggleAuth()">Signup</a>
+      <button type="button" id="toggleAuthBtn" class="link-btn">Signup</button>
     </p>
-  </div>
-</div>
+  </form>
+</main>
 
 <!-- MAIN APP -->
 <div id="app" class="hidden">
 
-  <div class="navbar">
+  <header class="navbar">
     <div class="nav-brand">
-      <div class="brand-icon">🚨</div>
+      <div class="brand-icon" aria-hidden="true">🚨</div>
       <div class="brand-text">
         <h1 id="title">City Emergency Response</h1>
         <span class="brand-sub">Live Operations Dashboard</span>
@@ -60,104 +78,104 @@
     </div>
     <div class="nav-actions">
       <div class="live-badge" id="roleBadge" title="Current Role">
-        <span>👤</span> <span id="roleLabel">CITIZEN</span>
+        <span aria-hidden="true">👤</span> <span id="roleLabel">CITIZEN</span>
       </div>
-      <div class="live-badge">
-        <span class="live-dot"></span> LIVE
+      <div class="live-badge" aria-label="Live connection active">
+        <span class="live-dot" aria-hidden="true"></span> LIVE
       </div>
-      <button class="lang-btn" onclick="toggleLanguage()">EN / हिंदी</button>
-      <button class="lang-btn logout-btn" onclick="logout()">Logout</button>
+      <button type="button" id="langToggleBtn" class="lang-btn" aria-label="Toggle language between English and Hindi">EN / हिंदी</button>
+      <button type="button" id="logoutBtn" class="lang-btn logout-btn">Logout</button>
     </div>
-  </div>
+  </header>
 
   <!-- STATUS BAR -->
-  <div class="status-bar">
+  <section class="status-bar" aria-label="Emergency status summary">
     <div class="stat-chip fire-chip">🔥 Fire: <span id="count-fire">0</span></div>
     <div class="stat-chip med-chip">🏥 Medical: <span id="count-medical">0</span></div>
     <div class="stat-chip acc-chip">🚗 Accident: <span id="count-accident">0</span></div>
     <div class="stat-chip pol-chip">🚔 Police: <span id="count-police">0</span></div>
     <div class="stat-chip min-chip">⚠️ Minor: <span id="count-minor">0</span></div>
     <div class="stat-chip total-chip">📋 Total: <span id="count-total">0</span></div>
-  </div>
+  </section>
 
   <div class="container">
 
     <!-- REPORT FORM -->
-    <div class="card form-card">
+    <form id="reportForm" class="card form-card" novalidate>
       <div class="card-header">
         <h3 id="reportTitle">
-          <span class="header-icon">📡</span> Report Emergency
+          <span class="header-icon" aria-hidden="true">📡</span> <span id="reportTitleText">Report Emergency</span>
         </h3>
-        <div class="card-glow"></div>
+        <div class="card-glow" aria-hidden="true"></div>
       </div>
 
       <!-- TYPE SELECTOR — visual pills -->
-      <div class="type-label">Emergency Type</div>
-      <div class="type-pills" id="typePills">
-        <button class="type-pill fire-pill active" data-val="Fire" onclick="selectType(this)">🔥 Fire</button>
-        <button class="type-pill med-pill" data-val="Medical" onclick="selectType(this)">🏥 Medical</button>
-        <button class="type-pill acc-pill" data-val="Accident" onclick="selectType(this)">🚗 Accident</button>
-        <button class="type-pill pol-pill" data-val="Police" onclick="selectType(this)">🚔 Police</button>
-        <button class="type-pill min-pill" data-val="Minor" onclick="selectType(this)">⚠️ Minor</button>
+      <div class="type-label" id="typeGroupLabel">Emergency Type</div>
+      <div class="type-pills" id="typePills" role="radiogroup" aria-labelledby="typeGroupLabel">
+        <button type="button" class="type-pill fire-pill active" data-val="Fire" role="radio" aria-checked="true">🔥 Fire</button>
+        <button type="button" class="type-pill med-pill" data-val="Medical" role="radio" aria-checked="false">🏥 Medical</button>
+        <button type="button" class="type-pill acc-pill" data-val="Accident" role="radio" aria-checked="false">🚗 Accident</button>
+        <button type="button" class="type-pill pol-pill" data-val="Police" role="radio" aria-checked="false">🚔 Police</button>
+        <button type="button" class="type-pill min-pill" data-val="Minor" role="radio" aria-checked="false">⚠️ Minor</button>
       </div>
       <input type="hidden" id="type" value="Fire">
 
       <!-- LOCATION WITH AUTOCOMPLETE -->
-      <div class="field-label">📍 Location</div>
+      <label class="field-label" for="location">📍 Location</label>
       <div class="location-wrapper">
         <input id="location" placeholder="Type a city, area or address..." autocomplete="off"
-          oninput="handleLocationInput(event)" onkeydown="handleLocationKey(event)">
-        <button class="map-btn" onclick="showLocation()" title="Show on map">🗺</button>
-        <div id="locationDropdown" class="location-dropdown hidden"></div>
+          aria-autocomplete="list" aria-controls="locationDropdown" aria-expanded="false" required>
+        <button type="button" id="showMapBtn" class="map-btn" title="Show on map" aria-label="Show location on map">🗺</button>
+        <div id="locationDropdown" class="location-dropdown hidden" role="listbox" aria-label="Location suggestions"></div>
       </div>
 
-      <div id="map" style="height:280px; margin-top:10px; display:none;"></div>
+      <div id="map" class="map-container hidden" aria-label="Incident location map"></div>
 
-      <div class="field-label">📏 Distance from Control Room (km)</div>
-      <input id="distance" placeholder="e.g. 3.5" type="number" min="0" step="0.1">
+      <label class="field-label" for="distance">📏 Distance from Control Room (km)</label>
+      <input id="distance" placeholder="e.g. 3.5" type="number" min="0" max="500" step="0.1" required>
 
-      <div class="field-label">📝 Description</div>
-      <textarea id="description" placeholder="Describe the emergency situation..." rows="3"></textarea>
+      <label class="field-label" for="description">📝 Description</label>
+      <textarea id="description" placeholder="Describe the emergency situation..." rows="3" minlength="5" maxlength="2000" required></textarea>
 
-      <div class="field-label">📷 Attach Photo (optional)</div>
-      <div class="file-drop" id="fileDrop" onclick="document.getElementById('image').click()"
-        ondragover="event.preventDefault()" ondrop="handleDrop(event)">
-        <span class="file-icon">📸</span>
-        <span id="fileLabel">Click or drag & drop image here</span>
-        <input type="file" id="image" accept="image/*" onchange="previewImage()" style="display:none">
+      <label class="field-label" for="image">📷 Attach Photo (optional, JPEG/PNG/WebP max 5MB)</label>
+      <div class="file-drop" id="fileDrop" tabindex="0" role="button" aria-label="Attach photo by clicking or dragging an image">
+        <span class="file-icon" aria-hidden="true">📸</span>
+        <span id="fileLabel">Click or drag &amp; drop image here</span>
+        <input type="file" id="image" accept="image/jpeg,image/png,image/webp" class="hidden">
       </div>
-      <img id="imagePreview" src="" alt="Preview"
-        style="display:none;margin-top:10px;width:100%;max-height:180px;object-fit:cover;border-radius:8px;border:2px solid #38bdf8;">
+      <img id="imagePreview" src="" alt="Selected attachment preview" class="image-preview hidden">
 
-      <button class="submit" id="submitBtn" onclick="reportEmergency()">
-        <span>🚨 Submit Emergency Report</span>
-        <span class="btn-arrow">→</span>
+      <button type="submit" class="submit" id="submitBtn">
+        <span id="submitBtnText">🚨 Submit Emergency Report</span>
+        <span class="btn-arrow" aria-hidden="true">→</span>
       </button>
-    </div>
+    </form>
 
     <!-- NOTIFICATIONS -->
-    <div class="card notif-card">
+    <aside class="card notif-card" aria-labelledby="notifTitle">
       <div class="card-header">
-        <h3 id="notifTitle"><span class="header-icon">📻</span> Live Feed</h3>
-        <div class="card-glow notif-glow"></div>
+        <h3 id="notifTitle">
+          <span class="header-icon" aria-hidden="true">📻</span> <span id="notifTitleText">Live Feed</span>
+        </h3>
+        <div class="card-glow notif-glow" aria-hidden="true"></div>
       </div>
-      <div id="notifications"></div>
-    </div>
+      <div id="notifications" aria-live="polite"></div>
+    </aside>
 
   </div>
 
   <!-- DASHBOARD -->
-  <div class="dashboard">
+  <section class="dashboard" aria-labelledby="dashboardTitle">
     <div class="dashboard-header">
       <h2 id="dashboardTitle">⚡ Emergency Dashboard</h2>
-      <div class="filter-pills">
-        <button class="filter-pill active" onclick="filterDash('all', this)">All</button>
-        <button class="filter-pill" onclick="filterDash('Pending', this)">Pending</button>
-        <button class="filter-pill" onclick="filterDash('Resolved', this)">Resolved</button>
+      <div class="filter-pills" id="filterPills" role="group" aria-label="Filter incidents by status">
+        <button type="button" class="filter-pill active" data-filter="all">All</button>
+        <button type="button" class="filter-pill" data-filter="Pending">Pending</button>
+        <button type="button" class="filter-pill" data-filter="Resolved">Resolved</button>
       </div>
     </div>
-    <div class="grid" id="emergencyGrid"></div>
-  </div>
+    <div class="grid" id="emergencyGrid" aria-live="polite"></div>
+  </section>
 
 </div>
 
