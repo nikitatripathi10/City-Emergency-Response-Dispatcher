@@ -1,0 +1,96 @@
+name: CERS CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  verify-and-build:
+    name: Lint, Typecheck, Rules/Unit Tests & Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Security vulnerability audit (High / Critical)
+        run: npm audit --audit-level=high
+
+      - name: TypeScript strict typecheck
+        run: npm run typecheck
+
+      - name: Run unit & security rules tests
+        run: |
+          npm test
+          npm run test:rules
+          node --test tests/run-tests.mjs
+
+      - name: Run throughput load benchmark
+        run: npm run loadtest
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Upload production dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cers-dist
+          path: dist/
+
+  preview-deploy:
+    name: Firebase Hosting PR Preview
+    needs: verify-and-build
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: cers-dist
+          path: dist/
+      - name: Deploy Preview Channel
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: city-emergency-dispatcher
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+  production-deploy:
+    name: Deploy to Firebase Hosting & Rules (main)
+    needs: verify-and-build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: cers-dist
+          path: dist/
+      - name: Deploy Live Channel
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: city-emergency-dispatcher
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
