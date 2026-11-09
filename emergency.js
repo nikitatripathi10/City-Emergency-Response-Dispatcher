@@ -101,7 +101,8 @@ const I18N = {
 let emergencies = [];
 let responseUnits = [];
 let currentUser = null;
-let currentUserRole = "dispatcher"; // Default to dispatcher for full operational dashboard preview
+let selectedLoginPortal = "citizen"; // 'citizen' | 'authority'
+let currentUserRole = "citizen";
 let signupMode = false;
 let lang = localStorage.getItem(LOCALE_STORAGE_KEY) === "hi" ? "hi" : "en";
 let selectedCoords = null;
@@ -305,27 +306,36 @@ function isValidImageSrc(src) {
 
 // ============ AUTH & RBAC ============
 async function resolveUserRole(user) {
+  const chosenPortalRole =
+    selectedLoginPortal === "authority"
+      ? document.getElementById("authorityRoleSelect")?.value || "dispatcher"
+      : "citizen";
+
   try {
-    const tokenResult = await user.getIdTokenResult();
-    if (tokenResult.claims?.role) return String(tokenResult.claims.role);
     const userRef = doc(db, "users", user.uid);
     const snap = await getDoc(userRef);
-    if (snap.exists() && snap.data().role) return String(snap.data().role);
+    if (snap.exists() && snap.data().role) {
+      // If user explicitly logged in via Authority tab, allow previewing the selected authority role
+      if (selectedLoginPortal === "authority") {
+        return chosenPortalRole;
+      }
+      return String(snap.data().role);
+    }
     await setDoc(
       userRef,
       {
         uid: user.uid,
         email: user.email || "",
-        role: "dispatcher",
+        role: chosenPortalRole,
         preferredLang: lang,
         createdAt: serverTimestamp(),
       },
       { merge: true }
     );
   } catch {
-    // Default to dispatcher so operator can use full dashboard immediately
+    // Fallback to chosen portal role
   }
-  return "dispatcher";
+  return chosenPortalRole;
 }
 
 onAuthStateChanged(auth, async (user) => {
@@ -356,22 +366,357 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 function updateRoleVisibility() {
-  const isStaff = ["responder", "dispatcher", "admin"].includes(currentUserRole);
-  const isDispatcherOrAdmin = ["dispatcher", "admin"].includes(currentUserRole);
+  const isCitizen = currentUserRole === "citizen";
+  const isResponder = currentUserRole === "responder";
+  const isDispatcher = currentUserRole === "dispatcher";
   const isAdmin = currentUserRole === "admin";
+  const isStaff = isResponder || isDispatcher || isAdmin;
+  const isDispatcherOrAdmin = isDispatcher || isAdmin;
 
-  document.getElementById("operationsMapSection")?.classList.toggle("hidden", !isStaff);
-  document.getElementById("unitsSection")?.classList.toggle("hidden", !isStaff);
+  // Toggle main portal views based on active role
+  document.getElementById("citizenPortalView")?.classList.toggle("hidden", !isCitizen);
+  document.getElementById("responderPortalView")?.classList.toggle("hidden", !isResponder);
+  document.getElementById("dispatcherPortalView")?.classList.toggle("hidden", !isDispatcherOrAdmin);
+
+  // Toggle sub-features inside dispatcher portal
   document.getElementById("createUnitForm")?.classList.toggle("hidden", !isDispatcherOrAdmin);
-  document.getElementById("analyticsSection")?.classList.toggle("hidden", !isDispatcherOrAdmin);
   document.getElementById("adminUsersSection")?.classList.toggle("hidden", !isAdmin);
 
-  if (isStaff) {
+  if (isCitizen) {
+    renderCitizenTrackingList();
+  } else if (isResponder) {
+    renderResponderMdtView();
+  } else if (isDispatcherOrAdmin) {
     setTimeout(() => renderOperationsClusterMap(), 150);
+    renderAnalyticsPanel();
+    smartRender();
+    if (isAdmin) {
+      void loadAdminUsersTable();
+    }
   }
-  if (isAdmin) {
-    void loadAdminUsersTable();
+}
+
+// ============ CITIZEN LIVE INCIDENT TRACKER ============
+function renderCitizenTrackingList() {
+  const container = document.getElementById("citizenTrackingList");
+  if (!container) return;
+  container.replaceChildren();
+
+  const myIncidents = emergencies.filter(
+    (e) => !currentUser || e.reporterUid === currentUser.uid || e.uid === currentUser.uid
+  );
+
+  if (myIncidents.length === 0) {
+    const p = document.createElement("p");
+    p.className = "empty-state-msg";
+    p.textContent = "You have not submitted any emergency reports yet. Use the form to report an incident.";
+    container.appendChild(p);
+    return;
   }
+
+  const STAGES = [
+    { key: "reported", label: "Reported", icon: "⏱️" },
+    { key: "verified", label: "Verified", icon: "📋" },
+    { key: "assigned", label: "Dispatched", icon: "🚓" },
+    { key: "en_route", label: "En Route", icon: "🚨" },
+    { key: "on_scene", label: "On Scene", icon: "📍" },
+    { key: "resolved", label: "Resolved", icon: "✅" },
+  ];
+
+  function getActiveStageIndex(status) {
+    switch (status) {
+      case "reported":
+      case "Pending":
+        return 0;
+      case "verified":
+        return 1;
+      case "assigned":
+        return 2;
+      case "en_route":
+        return 3;
+      case "on_scene":
+        return 4;
+      case "resolved":
+      case "Resolved":
+      case "closed":
+        return 5;
+      default:
+        return 0;
+    }
+  }
+
+  myIncidents.forEach((inc) => {
+    const card = document.createElement("article");
+    card.className = "tracking-card";
+
+    const tc = TYPE_COLORS[inc.type] || TYPE_COLORS.Minor;
+    const isResolved = ["resolved", "Resolved", "closed"].includes(inc.status);
+    const isCancelled = inc.status === "cancelled" || inc.status === "false_alarm";
+
+    const topHeader = document.createElement("div");
+    topHeader.className = "tracking-card-header";
+
+    const titleWrap = document.createElement("div");
+    const titleStrong = document.createElement("strong");
+    titleStrong.style.fontSize = "1.05rem";
+    titleStrong.textContent = `${tc.emoji} ${inc.type} Report · ${inc.location}`;
+    const timeSub = document.createElement("div");
+    timeSub.className = "notif-time";
+    timeSub.textContent = `Reported: ${formatRelativeTime(inc.createdAtMs)} · Distance: ${inc.distance} km`;
+    titleWrap.append(titleStrong, timeSub);
+
+    const badge = document.createElement("span");
+    badge.className = `badge ${isResolved ? "low" : "high"}`;
+    badge.textContent = inc.status.toUpperCase();
+    topHeader.append(titleWrap, badge);
+
+    card.appendChild(topHeader);
+
+    // Render 6-stage milestone stepper (unless cancelled)
+    if (!isCancelled) {
+      const activeIdx = getActiveStageIndex(inc.status);
+      const stepper = document.createElement("div");
+      stepper.className = "status-stepper";
+
+      STAGES.forEach((st, idx) => {
+        const node = document.createElement("div");
+        const isCompleted = idx <= activeIdx;
+        const isCurrent = idx === activeIdx;
+        node.className = `step-node ${isCompleted ? "completed" : ""} ${isCurrent ? "active" : ""}`;
+
+        const dot = document.createElement("div");
+        dot.className = "step-dot";
+        dot.textContent = isCompleted ? "✓" : String(idx + 1);
+
+        const lbl = document.createElement("div");
+        lbl.textContent = `${st.icon} ${st.label}`;
+
+        node.append(dot, lbl);
+        stepper.appendChild(node);
+
+        if (idx < STAGES.length - 1) {
+          const connector = document.createElement("div");
+          connector.className = `step-connector ${idx < activeIdx ? "completed" : ""}`;
+          stepper.appendChild(connector);
+        }
+      });
+      card.appendChild(stepper);
+    } else {
+      const cancelMsg = document.createElement("p");
+      cancelMsg.style.cssText = "color:#f87171;font-size:13px;margin:8px 0";
+      cancelMsg.textContent = `This report was ${inc.status === "cancelled" ? "cancelled by you" : "flagged as a false alarm"}.`;
+      card.appendChild(cancelMsg);
+    }
+
+    // Details summary
+    const descP = document.createElement("p");
+    descP.className = "ec-desc";
+    descP.style.marginTop = "10px";
+    descP.textContent = `Description: ${inc.desc}`;
+    card.appendChild(descP);
+
+    // Cancel action if still unassigned
+    if ((inc.status === "reported" || inc.status === "Pending") && currentUser) {
+      const cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "deleteBtn";
+      cancelBtn.style.cssText = "width:auto;padding:6px 14px;margin-top:8px";
+      cancelBtn.textContent = "Cancel This Report";
+      cancelBtn.addEventListener("click", async () => {
+        const ok = await showConfirmModal("Cancel Report", "Are you sure you want to cancel this emergency request?");
+        if (!ok) return;
+        try {
+          await updateDoc(doc(db, "emergencies", inc.id), {
+            status: "cancelled",
+            updatedAt: serverTimestamp(),
+          });
+          showToast("Emergency report cancelled.", "info");
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      });
+      card.appendChild(cancelBtn);
+    }
+
+    // Rating & Feedback if resolved
+    if (isResolved) {
+      card.appendChild(buildFeedbackSection(inc));
+    }
+
+    container.appendChild(card);
+  });
+}
+
+// ============ RESPONDER VEHICLE TERMINAL (MDT) ============
+function renderResponderMdtView() {
+  const detailsContainer = document.getElementById("responderIncidentDetails");
+  if (!detailsContainer) return;
+  detailsContainer.replaceChildren();
+
+  // Find any active call assigned to response units
+  const activeAssigned = emergencies.find(
+    (e) =>
+      !["resolved", "Resolved", "closed", "cancelled", "false_alarm"].includes(e.status) &&
+      e.assignedUnitIds &&
+      e.assignedUnitIds.length > 0
+  ) || emergencies.find((e) => !["resolved", "Resolved", "closed"].includes(e.status));
+
+  if (!activeAssigned) {
+    const p = document.createElement("p");
+    p.style.cssText = "color:var(--muted);font-size:14px;padding:12px 0";
+    p.textContent = "No emergency calls currently assigned to your unit. Vehicle telemetry is active on standby.";
+    detailsContainer.appendChild(p);
+    return;
+  }
+
+  const tc = TYPE_COLORS[activeAssigned.type] || TYPE_COLORS.Minor;
+
+  const header = document.createElement("div");
+  header.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:12px";
+  const title = document.createElement("h3");
+  title.style.cssText = "font-family:var(--font-head);font-size:1.3rem;color:white";
+  title.textContent = `${tc.emoji} ${activeAssigned.type} EMERGENCY — ${activeAssigned.location}`;
+  const badge = document.createElement("span");
+  badge.className = "badge high";
+  badge.textContent = `STATUS: ${activeAssigned.status.toUpperCase()}`;
+  header.append(title, badge);
+
+  const infoRow = document.createElement("div");
+  infoRow.style.cssText = "font-size:14px;line-height:1.6;margin-bottom:14px";
+
+  const locDiv = document.createElement("div");
+  locDiv.innerHTML = "📍 <strong>Location:</strong> ";
+  const locSpan = document.createElement("span");
+  locSpan.textContent = `${activeAssigned.location} (${activeAssigned.distance} km from control base)`;
+  locDiv.appendChild(locSpan);
+
+  const sevDiv = document.createElement("div");
+  sevDiv.innerHTML = "⚠️ <strong>Severity:</strong> ";
+  const sevSpan = document.createElement("span");
+  sevSpan.textContent = `${activeAssigned.reportedSeverity.toUpperCase()} · 👥 People Impacted: ${activeAssigned.peopleAffected}`;
+  sevDiv.appendChild(sevSpan);
+
+  const hazDiv = document.createElement("div");
+  hazDiv.innerHTML = "🛡️ <strong>Hazards / Vulnerabilities:</strong> ";
+  const hazSpan = document.createElement("span");
+  hazSpan.textContent =
+    activeAssigned.vulnerabilityFlags && activeAssigned.vulnerabilityFlags.length > 0
+      ? activeAssigned.vulnerabilityFlags.join(", ").toUpperCase()
+      : "None reported";
+  hazDiv.appendChild(hazSpan);
+
+  const descDiv = document.createElement("div");
+  descDiv.innerHTML = "📝 <strong>Situation Report:</strong> ";
+  const descSpan = document.createElement("span");
+  descSpan.textContent = activeAssigned.desc;
+  descDiv.appendChild(descSpan);
+
+  infoRow.append(locDiv, sevDiv, hazDiv, descDiv);
+
+  // Tactical one-tap milestone buttons
+  const actionsGrid = document.createElement("div");
+  actionsGrid.className = "mdt-tactical-buttons";
+
+  const btnEnRoute = document.createElement("button");
+  btnEnRoute.type = "button";
+  btnEnRoute.className = "mdt-btn mdt-btn-enroute";
+  btnEnRoute.textContent = "🚨 1. ACCEPT & EN ROUTE";
+  btnEnRoute.addEventListener("click", async () => {
+    try {
+      if (currentUser?.uid?.startsWith("demo-")) {
+        activeAssigned.status = "en_route";
+        renderResponderMdtView();
+        showToast("Unit marked EN ROUTE to scene.", "success");
+        return;
+      }
+      await updateDoc(doc(db, "emergencies", activeAssigned.id), {
+        status: "en_route",
+        updatedAt: serverTimestamp(),
+      });
+      await addDoc(collection(db, "emergencies", activeAssigned.id, "timeline"), {
+        incidentId: activeAssigned.id,
+        actorUid: currentUser?.uid || "responder",
+        actorRole: "responder",
+        action: "status_change",
+        fromState: activeAssigned.status,
+        toState: "en_route",
+        note: "Unit acknowledged call and is en route to coordinates with sirens",
+        createdAt: serverTimestamp(),
+      });
+      showToast("Unit marked EN ROUTE to scene.", "success");
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  });
+
+  const btnOnScene = document.createElement("button");
+  btnOnScene.type = "button";
+  btnOnScene.className = "mdt-btn mdt-btn-onscene";
+  btnOnScene.textContent = "📍 2. ARRIVED ON SCENE";
+  btnOnScene.addEventListener("click", async () => {
+    try {
+      if (currentUser?.uid?.startsWith("demo-")) {
+        activeAssigned.status = "on_scene";
+        renderResponderMdtView();
+        showToast("Unit marked ON SCENE. Dispatcher notified.", "success");
+        return;
+      }
+      await updateDoc(doc(db, "emergencies", activeAssigned.id), {
+        status: "on_scene",
+        updatedAt: serverTimestamp(),
+      });
+      await addDoc(collection(db, "emergencies", activeAssigned.id, "timeline"), {
+        incidentId: activeAssigned.id,
+        actorUid: currentUser?.uid || "responder",
+        actorRole: "responder",
+        action: "status_change",
+        fromState: activeAssigned.status,
+        toState: "on_scene",
+        note: "Unit arrived at coordinates and commenced emergency operations",
+        createdAt: serverTimestamp(),
+      });
+      showToast("Unit marked ON SCENE. Dispatcher notified.", "success");
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  });
+
+  const btnResolve = document.createElement("button");
+  btnResolve.type = "button";
+  btnResolve.className = "mdt-btn mdt-btn-resolve";
+  btnResolve.textContent = "✔️ 3. RESOLVE & CLEAR";
+  btnResolve.addEventListener("click", async () => {
+    try {
+      if (currentUser?.uid?.startsWith("demo-")) {
+        activeAssigned.status = "resolved";
+        activeAssigned.resolvedAtMs = Date.now();
+        renderResponderMdtView();
+        showToast("Call marked RESOLVED. Unit available for next call.", "success");
+        return;
+      }
+      await updateDoc(doc(db, "emergencies", activeAssigned.id), {
+        status: "resolved",
+        resolvedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      await addDoc(collection(db, "emergencies", activeAssigned.id, "timeline"), {
+        incidentId: activeAssigned.id,
+        actorUid: currentUser?.uid || "responder",
+        actorRole: "responder",
+        action: "status_change",
+        fromState: activeAssigned.status,
+        toState: "resolved",
+        note: "Incident mitigated and cleared. Unit returning to available status.",
+        createdAt: serverTimestamp(),
+      });
+      showToast("Call marked RESOLVED. Unit available for next call.", "success");
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  });
+
+  actionsGrid.append(btnEnRoute, btnOnScene, btnResolve);
+  detailsContainer.append(header, infoRow, actionsGrid);
 }
 
 // ============ REALTIME FIRESTORE SUBSCRIPTIONS ============
@@ -460,7 +805,13 @@ function startRealtimeSubscriptions() {
       });
       emergencies = list;
       updateStatusCounts();
-      smartRender();
+      if (currentUserRole === "citizen") {
+        renderCitizenTrackingList();
+      } else if (currentUserRole === "responder") {
+        renderResponderMdtView();
+      } else {
+        smartRender();
+      }
       if (["responder", "dispatcher", "admin"].includes(currentUserRole)) {
         renderOperationsClusterMap();
       }
@@ -491,7 +842,12 @@ function startRealtimeSubscriptions() {
         });
       });
       renderUnitsList();
-      renderOperationsClusterMap();
+      if (["responder", "dispatcher", "admin"].includes(currentUserRole)) {
+        renderOperationsClusterMap();
+      }
+      if (currentUserRole === "responder") {
+        renderResponderMdtView();
+      }
     },
     () => {
       responseUnits = [];
@@ -861,6 +1217,72 @@ async function reportEmergency(e) {
     }
   }
 
+  if (currentUser?.uid?.startsWith("demo-")) {
+    const demoId = `demo-inc-${Date.now()}`;
+    const newInc = {
+      id: demoId,
+      uid: currentUser.uid,
+      reporterUid: currentUser.uid,
+      type,
+      reportedSeverity,
+      peopleAffected,
+      vulnerabilityFlags,
+      location,
+      desc,
+      coordinates: selectedCoords || { lat: 28.6139, lng: 77.209 },
+      geohash: selectedCoords ? encodeGeohash(selectedCoords.lat, selectedCoords.lng) : "",
+      distance: distanceKm,
+      priorityScore: priorityData.score,
+      priority: priorityData.level,
+      weight: priorityData.weight,
+      status: "reported",
+      assignedUnitIds: [],
+      assignedResponderUids: [],
+      mergedIntoId: null,
+      duplicateCount: 0,
+      img: imgURL,
+      rating: null,
+      feedback: "",
+      abuseFlags: 0,
+      archived: false,
+      createdAtMs: Date.now(),
+      updatedAtMs: Date.now(),
+      timestamp: Date.now(),
+    };
+    emergencies.unshift(newInc);
+    submissionTimestamps.push(Date.now());
+    updateStatusCounts();
+    if (currentUserRole === "citizen") {
+      renderCitizenTrackingList();
+    } else {
+      smartRender();
+    }
+    showToast("Emergency reported! Live CAD queue notified.", "success");
+    ["location", "description"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+    const pa = document.getElementById("peopleAffected");
+    if (pa) pa.value = "1";
+    document.querySelectorAll(".vuln-checkbox").forEach((cb) => {
+      cb.checked = false;
+    });
+    const fi = document.getElementById("image");
+    if (fi) fi.value = "";
+    const preview = document.getElementById("imagePreview");
+    if (preview) {
+      preview.removeAttribute("src");
+      preview.classList.add("hidden");
+    }
+    const fl = document.getElementById("fileLabel");
+    if (fl) fl.textContent = t("fileDropPrompt");
+    selectedCoords = null;
+    closeDropdown();
+    btnText.textContent = `🚨 ${t("submitReportBtn")}`;
+    btn.disabled = false;
+    return;
+  }
+
   try {
     const docRef = await addDoc(collection(db, "emergencies"), {
       uid: currentUser.uid,
@@ -1019,6 +1441,17 @@ function buildFeedbackSection(incident) {
       return;
     }
     try {
+      if (currentUser?.uid?.startsWith("demo-")) {
+        incident.rating = numRating;
+        incident.feedback = textarea.value.trim();
+        if (currentUserRole === "citizen") {
+          renderCitizenTrackingList();
+        } else {
+          smartRender();
+        }
+        showToast("Feedback submitted! Thank you.", "success");
+        return;
+      }
       await updateDoc(doc(db, "emergencies", incident.id), {
         rating: numRating,
         feedback: textarea.value.trim(),
@@ -1167,6 +1600,17 @@ function syncCardDynamicState(card, e) {
     btn.textContent = `→ Mark as ${nextState.replace("_", " ").toUpperCase()}`;
     btn.addEventListener("click", async () => {
       try {
+        if (currentUser?.uid?.startsWith("demo-")) {
+          e.status = nextState;
+          if (nextState === "resolved" || nextState === "Resolved") {
+            e.resolvedAtMs = Date.now();
+          }
+          smartRender();
+          renderAnalyticsPanel();
+          updateStatusCounts();
+          showToast(`Incident status updated to ${nextState}.`, "success");
+          return;
+        }
         const payload = { status: nextState, updatedAt: serverTimestamp() };
         if (nextState === "resolved" || nextState === "Resolved") {
           payload.resolvedAt = serverTimestamp();
@@ -1210,6 +1654,17 @@ function syncCardDynamicState(card, e) {
       const chosen = avail.find((u) => u.id === unitSelect.value);
       if (!chosen) return;
       try {
+        if (currentUser?.uid?.startsWith("demo-")) {
+          e.status = "assigned";
+          e.assignedUnitIds = [...(e.assignedUnitIds || []), chosen.id];
+          chosen.status = "dispatched";
+          chosen.currentIncidentId = e.id;
+          smartRender();
+          renderUnitsList();
+          renderOperationsClusterMap();
+          showToast(`Dispatched ${chosen.name} to ${e.location}.`, "success");
+          return;
+        }
         await updateDoc(doc(db, "emergencies", e.id), {
           status: "assigned",
           assignedUnitIds: [...(e.assignedUnitIds || []), chosen.id],
@@ -1241,6 +1696,13 @@ function syncCardDynamicState(card, e) {
       );
       if (!ok) return;
       try {
+        if (currentUser?.uid?.startsWith("demo-")) {
+          e.archived = true;
+          smartRender();
+          updateStatusCounts();
+          showToast("Incident archived.", "info");
+          return;
+        }
         await updateDoc(doc(db, "emergencies", e.id), {
           archived: true,
           updatedAt: serverTimestamp(),
@@ -1464,9 +1926,25 @@ function applyTranslations() {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
   };
+  const isAuthority = selectedLoginPortal === "authority";
   setTxt("title", t("appTitle"));
   setTxt("brandSubtitle", t("appSubtitle"));
-  setTxt("authTitle", signupMode ? t("signupTitle") : t("loginTitle"));
+  setTxt(
+    "authTitle",
+    isAuthority
+      ? signupMode
+        ? "Authority Registration"
+        : "Authority Login"
+      : signupMode
+        ? t("signupTitle")
+        : "Citizen Login"
+  );
+  setTxt(
+    "authSubtitle",
+    isAuthority
+      ? "Control Room Dispatch, Field Responders & Administration"
+      : "Public Emergency Reporting & Live Status Tracking"
+  );
   setTxt("authSubmitText", signupMode ? t("signupBtn") : t("loginBtn"));
   setTxt("switchText", signupMode ? t("haveAccount") : t("noAccount"));
   setTxt("toggleAuthBtn", signupMode ? t("loginBtn") : t("signupBtn"));
@@ -1503,9 +1981,226 @@ function exportCsv() {
   URL.revokeObjectURL(url);
 }
 
+// ============ SAMPLE DEMO DATA & INSTANT EVALUATOR MODE ============
+const SAMPLE_DEMO_INCIDENTS = [
+  {
+    id: "demo-inc-1",
+    uid: "demo-citizen-uid",
+    reporterUid: "demo-citizen-uid",
+    type: "Fire",
+    reportedSeverity: "critical",
+    peopleAffected: 6,
+    vulnerabilityFlags: ["elderly", "flammable"],
+    location: "Connaught Place Block B, Central Delhi",
+    desc: "Commercial building electrical transformer caught fire. Thick smoke spreading to upper floors.",
+    coordinates: { lat: 28.6315, lng: 77.2167 },
+    geohash: "ttnfvh5qx",
+    distance: 1.8,
+    priorityScore: 92,
+    priority: "CRITICAL",
+    weight: 92,
+    status: "assigned",
+    assignedUnitIds: ["unit-engine-1"],
+    assignedResponderUids: ["demo-responder-uid"],
+    mergedIntoId: null,
+    duplicateCount: 0,
+    img: "",
+    rating: null,
+    feedback: "",
+    abuseFlags: 0,
+    archived: false,
+    createdAtMs: Date.now() - 480000,
+    updatedAtMs: Date.now() - 120000,
+    timestamp: Date.now() - 480000,
+  },
+  {
+    id: "demo-inc-2",
+    uid: "demo-citizen-uid",
+    reporterUid: "demo-citizen-uid",
+    type: "Medical",
+    reportedSeverity: "critical",
+    peopleAffected: 1,
+    vulnerabilityFlags: ["children"],
+    location: "Karol Bagh Market, New Delhi",
+    desc: "Pedestrian collapsed with chest pain and breathing difficulty outside metro station.",
+    coordinates: { lat: 28.6517, lng: 77.1906 },
+    geohash: "ttnfvsdv1",
+    distance: 4.2,
+    priorityScore: 84,
+    priority: "CRITICAL",
+    weight: 84,
+    status: "en_route",
+    assignedUnitIds: ["unit-ems-2"],
+    assignedResponderUids: ["demo-responder-uid"],
+    mergedIntoId: null,
+    duplicateCount: 0,
+    img: "",
+    rating: null,
+    feedback: "",
+    abuseFlags: 0,
+    archived: false,
+    createdAtMs: Date.now() - 900000,
+    updatedAtMs: Date.now() - 300000,
+    timestamp: Date.now() - 900000,
+  },
+  {
+    id: "demo-inc-3",
+    uid: "demo-citizen-uid",
+    reporterUid: "demo-citizen-uid",
+    type: "Accident",
+    reportedSeverity: "moderate",
+    peopleAffected: 2,
+    vulnerabilityFlags: [],
+    location: "Ring Road near AIIMS Flyover",
+    desc: "Two-car collision blocking middle lane. No trapped passengers, minor injuries.",
+    coordinates: { lat: 28.5672, lng: 77.2100 },
+    geohash: "ttnfeh28z",
+    distance: 5.6,
+    priorityScore: 65,
+    priority: "HIGH",
+    weight: 65,
+    status: "verified",
+    assignedUnitIds: [],
+    assignedResponderUids: [],
+    mergedIntoId: null,
+    duplicateCount: 0,
+    img: "",
+    rating: null,
+    feedback: "",
+    abuseFlags: 0,
+    archived: false,
+    createdAtMs: Date.now() - 1500000,
+    updatedAtMs: Date.now() - 600000,
+    timestamp: Date.now() - 1500000,
+  },
+  {
+    id: "demo-inc-4",
+    uid: "demo-citizen-uid",
+    reporterUid: "demo-citizen-uid",
+    type: "Police",
+    reportedSeverity: "low",
+    peopleAffected: 1,
+    vulnerabilityFlags: [],
+    location: "Lajpat Nagar Central Market",
+    desc: "Shoplifting disturbance reported at electronics store. Situation stable.",
+    coordinates: { lat: 28.5700, lng: 77.2400 },
+    geohash: "ttnff0021",
+    distance: 7.1,
+    priorityScore: 35,
+    priority: "LOW",
+    weight: 35,
+    status: "resolved",
+    assignedUnitIds: ["unit-patrol-3"],
+    assignedResponderUids: ["demo-responder-uid"],
+    mergedIntoId: null,
+    duplicateCount: 0,
+    img: "",
+    rating: 5,
+    feedback: "Police unit arrived in 7 minutes and resolved the issue safely.",
+    abuseFlags: 0,
+    archived: false,
+    createdAtMs: Date.now() - 3600000,
+    updatedAtMs: Date.now() - 1800000,
+    resolvedAtMs: Date.now() - 1800000,
+    timestamp: Date.now() - 3600000,
+  },
+];
+
+const SAMPLE_DEMO_UNITS = [
+  {
+    id: "unit-engine-1",
+    name: "Engine 101 (Heavy Water Tender)",
+    type: "Fire",
+    status: "busy",
+    coordinates: { lat: 28.632, lng: 77.217 },
+    capacity: 6,
+    contactPhone: "+91 11 2341 2222",
+  },
+  {
+    id: "unit-ems-2",
+    name: "EMS 204 (Advanced Life Support)",
+    type: "Medical",
+    status: "en_route",
+    coordinates: { lat: 28.65, lng: 77.192 },
+    capacity: 3,
+    contactPhone: "+91 11 2341 3333",
+  },
+  {
+    id: "unit-patrol-3",
+    name: "Patrol PCR-12 (Central Sector)",
+    type: "Police",
+    status: "available",
+    coordinates: { lat: 28.618, lng: 77.211 },
+    capacity: 2,
+    contactPhone: "+91 11 2341 4444",
+  },
+  {
+    id: "unit-rescue-4",
+    name: "Rescue Squad 4 (Disaster Response)",
+    type: "Rescue",
+    status: "available",
+    coordinates: { lat: 28.625, lng: 77.22 },
+    capacity: 8,
+    contactPhone: "+91 11 2341 5555",
+  },
+];
+
+function loginAsDemo(role, email) {
+  currentUser = {
+    uid: `demo-${role}-uid`,
+    email: email,
+    displayName: `Demo ${role.toUpperCase()}`,
+  };
+  currentUserRole = role;
+  const roleSwitcher = document.getElementById("roleSwitcher");
+  if (roleSwitcher) roleSwitcher.value = role;
+
+  if (emergencies.length === 0) {
+    emergencies = JSON.parse(JSON.stringify(SAMPLE_DEMO_INCIDENTS));
+  }
+  if (responseUnits.length === 0) {
+    responseUnits = JSON.parse(JSON.stringify(SAMPLE_DEMO_UNITS));
+  }
+
+  document.getElementById("authPage")?.classList.add("hidden");
+  document.getElementById("app")?.classList.remove("hidden");
+  updateRoleVisibility();
+  applyTranslations();
+  updateStatusCounts();
+  renderUnitsList();
+  showToast(`Entered ${role.toUpperCase()} Portal in Instant Demo Mode`, "success");
+}
+
 // ============ INIT EVENT LISTENERS ============
 function initApp() {
   applyTranslations();
+
+  document.querySelectorAll(".portal-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".portal-tab").forEach((tEl) => {
+        tEl.classList.remove("active");
+        tEl.setAttribute("aria-selected", "false");
+      });
+      tab.classList.add("active");
+      tab.setAttribute("aria-selected", "true");
+      selectedLoginPortal = tab.dataset.portal || "citizen";
+      document
+        .getElementById("authorityRoleGroup")
+        ?.classList.toggle("hidden", selectedLoginPortal !== "authority");
+      applyTranslations();
+    });
+  });
+
+  // QUICK ONE-CLICK DEMO BUTTONS
+  document.getElementById("demoCitizenBtn")?.addEventListener("click", () => {
+    loginAsDemo("citizen", "citizen.demo@city.gov");
+  });
+  document.getElementById("demoDispatcherBtn")?.addEventListener("click", () => {
+    loginAsDemo("dispatcher", "dispatcher.911@city.gov");
+  });
+  document.getElementById("demoResponderBtn")?.addEventListener("click", () => {
+    loginAsDemo("responder", "responder.fire1@city.gov");
+  });
 
   document.getElementById("authForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1573,7 +2268,20 @@ function initApp() {
   });
 
   document.getElementById("logoutBtn")?.addEventListener("click", () => {
-    signOut(auth).then(() => showToast("Signed out.", "info"));
+    currentUser = null;
+    if (unsubscribeEmergencies) {
+      unsubscribeEmergencies();
+      unsubscribeEmergencies = null;
+    }
+    if (unsubscribeUnits) {
+      unsubscribeUnits();
+      unsubscribeUnits = null;
+    }
+    emergencies = [];
+    document.getElementById("authPage")?.classList.remove("hidden");
+    document.getElementById("app")?.classList.add("hidden");
+    signOut(auth).catch(() => {});
+    showToast("Signed out.", "info");
   });
 
   document.querySelectorAll(".type-pill").forEach((pill) => {

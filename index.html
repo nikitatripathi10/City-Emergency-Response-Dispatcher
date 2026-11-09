@@ -84,8 +84,30 @@
       <span class="logo-icon" aria-hidden="true">🚨</span>
       <span class="logo-text">CERS</span>
     </div>
-    <h2 id="authTitle">Login</h2>
-    <p class="auth-sub">City Emergency Response System</p>
+
+    <!-- CITIZEN VS AUTHORITY PORTAL TABS -->
+    <div class="portal-tabs" role="tablist" aria-label="Select Login Portal">
+      <button type="button" class="portal-tab active" id="tabCitizenPortal" data-portal="citizen" role="tab" aria-selected="true">
+        👤 Citizen Portal
+      </button>
+      <button type="button" class="portal-tab" id="tabAuthorityPortal" data-portal="authority" role="tab" aria-selected="false">
+        🛡️ Authority Login
+      </button>
+    </div>
+
+    <h2 id="authTitle">Citizen Login</h2>
+    <p class="auth-sub" id="authSubtitle">Public Emergency Reporting &amp; Live Status Tracking</p>
+
+    <!-- AUTHORITY DEPARTMENT / ROLE SELECTOR (Shown only when Authority Portal tab is active) -->
+    <div id="authorityRoleGroup" class="input-group hidden">
+      <label for="authorityRoleSelect" class="sr-only">Authority Role</label>
+      <select id="authorityRoleSelect" aria-label="Select Authority Role">
+        <option value="dispatcher">🎧 Control Room Dispatcher</option>
+        <option value="responder">🚓 Field Responder (Fire / Medical / Police)</option>
+        <option value="admin">🛡️ System Administrator</option>
+      </select>
+    </div>
+
     <div class="input-group">
       <label for="username" class="sr-only">Email Address</label>
       <span class="input-icon" aria-hidden="true">✉</span>
@@ -105,6 +127,16 @@
       <button type="button" id="toggleAuthBtn" class="link-btn">Signup</button>
       <span>·</span>
       <button type="button" id="resetPasswordBtn" class="link-btn">Forgot Password?</button>
+    </div>
+
+    <!-- QUICK DEMO ACCESS (For evaluators and testers) -->
+    <div class="quick-demo-box">
+      <div class="quick-demo-title">⚡ QUICK DEMO ACCESS (ONE-CLICK)</div>
+      <div class="quick-demo-buttons">
+        <button type="button" class="demo-pill" id="demoCitizenBtn">👤 Citizen Portal</button>
+        <button type="button" class="demo-pill" id="demoDispatcherBtn">🎧 Dispatcher CAD</button>
+        <button type="button" class="demo-pill" id="demoResponderBtn">🚓 Responder MDT</button>
+      </div>
     </div>
   </form>
 </main>
@@ -140,121 +172,175 @@
     </div>
   </header>
 
-  <!-- STATUS BAR -->
-  <section class="status-bar" aria-label="Emergency status summary">
-    <div class="stat-chip fire-chip">🔥 Fire: <span id="count-fire">0</span></div>
-    <div class="stat-chip med-chip">🏥 Medical: <span id="count-medical">0</span></div>
-    <div class="stat-chip acc-chip">🚗 Accident: <span id="count-accident">0</span></div>
-    <div class="stat-chip pol-chip">🚔 Police: <span id="count-police">0</span></div>
-    <div class="stat-chip min-chip">⚠️ Minor: <span id="count-minor">0</span></div>
-    <div class="stat-chip total-chip">📋 Total: <span id="count-total">0</span></div>
-  </section>
+  <!-- CITIZEN PORTAL VIEW (For General Public) -->
+  <div id="citizenPortalView">
+    <div class="container">
 
-  <div class="container">
-
-    <!-- REPORT FORM -->
-    <form id="reportForm" class="card form-card" novalidate>
-      <div class="card-header">
-        <h3 id="reportTitle">
-          <span class="header-icon" aria-hidden="true">📡</span> <span id="reportTitleText">Report Emergency</span>
-        </h3>
-        <div class="card-glow" aria-hidden="true"></div>
-      </div>
-
-      <!-- TYPE SELECTOR -->
-      <div class="type-label" id="typeGroupLabel">Emergency Type</div>
-      <div class="type-pills" id="typePills" role="radiogroup" aria-labelledby="typeGroupLabel">
-        <button type="button" class="type-pill fire-pill active" data-val="Fire" role="radio" aria-checked="true">🔥 Fire</button>
-        <button type="button" class="type-pill med-pill" data-val="Medical" role="radio" aria-checked="false">🏥 Medical</button>
-        <button type="button" class="type-pill acc-pill" data-val="Accident" role="radio" aria-checked="false">🚗 Accident</button>
-        <button type="button" class="type-pill pol-pill" data-val="Police" role="radio" aria-checked="false">🚔 Police</button>
-        <button type="button" class="type-pill min-pill" data-val="Minor" role="radio" aria-checked="false">⚠️ Minor</button>
-      </div>
-      <input type="hidden" id="type" value="Fire">
-
-      <!-- SEVERITY & PEOPLE AFFECTED -->
-      <div class="form-row-2col">
-        <div>
-          <label class="field-label" for="reportedSeverity">⚠️ Reported Severity</label>
-          <select id="reportedSeverity">
-            <option value="critical">Critical (Life-Threatening)</option>
-            <option value="high" selected>High (Urgent Response)</option>
-            <option value="moderate">Moderate</option>
-            <option value="low">Low / Non-Urgent</option>
-          </select>
-        </div>
-        <div>
-          <label class="field-label" for="peopleAffected">👥 People Affected</label>
-          <input id="peopleAffected" type="number" min="1" max="10000" value="1" required>
-        </div>
-      </div>
-
-      <!-- VULNERABILITY FLAGS -->
-      <div class="field-label">🛡️ Vulnerability Flags</div>
-      <div class="vuln-flags" role="group" aria-label="Vulnerability indicators">
-        <label class="vuln-label"><input type="checkbox" class="vuln-checkbox" value="trapped"> Trapped Persons</label>
-        <label class="vuln-label"><input type="checkbox" class="vuln-checkbox" value="hazmat"> Chemical / Hazmat</label>
-        <label class="vuln-label"><input type="checkbox" class="vuln-checkbox" value="children"> Children Present</label>
-        <label class="vuln-label"><input type="checkbox" class="vuln-checkbox" value="elderly"> Elderly / Disabled</label>
-      </div>
-
-      <!-- LOCATION WITH AUTOCOMPLETE + GEOLOCATION -->
-      <label class="field-label" for="location">📍 Location</label>
-      <div class="location-wrapper">
-        <input id="location" placeholder="Search address, landmark, or drop pin on map..." autocomplete="off"
-          aria-autocomplete="list" aria-controls="locationDropdown" aria-expanded="false" required>
-        <button type="button" id="geoLocateBtn" class="map-btn" title="Use My Current GPS Location" aria-label="Use my current location">🎯 GPS</button>
-        <button type="button" id="showMapBtn" class="map-btn" title="Show on map" aria-label="Show location on map">🗺</button>
-        <div id="locationDropdown" class="location-dropdown hidden" role="listbox" aria-label="Location suggestions"></div>
-      </div>
-
-      <div id="map" class="map-container hidden" aria-label="Incident location map"></div>
-
-      <label class="field-label" for="distance">📏 Distance from Control Room (km, auto-calculated from coordinates)</label>
-      <input id="distance" placeholder="Auto-computed from coordinates (or enter km)" type="number" min="0" max="500" step="0.1" value="3.5" required>
-
-      <label class="field-label" for="description">📝 Incident Description</label>
-      <textarea id="description" placeholder="Describe the emergency situation, hazards, and landmarks..." rows="3" minlength="5" maxlength="2000" required></textarea>
-
-      <label class="field-label" for="image">📷 Attach Photo (optional, JPEG/PNG/WebP max 5MB)</label>
-      <div class="file-drop" id="fileDrop" tabindex="0" role="button" aria-label="Attach photo by clicking or dragging an image">
-        <span class="file-icon" aria-hidden="true">📸</span>
-        <span id="fileLabel">Click or drag &amp; drop image here</span>
-        <input type="file" id="image" accept="image/jpeg,image/png,image/webp" class="hidden">
-      </div>
-      <img id="imagePreview" src="" alt="Selected attachment preview" class="image-preview hidden">
-
-      <label class="consent-line">
-        <input type="checkbox" id="consentCheck" checked required>
-        <span>I confirm this report is genuine. False emergency reports are logged and may result in account suspension.</span>
-      </label>
-
-      <button type="submit" class="submit" id="submitBtn">
-        <span id="submitBtnText">🚨 Submit Emergency Report</span>
-        <span class="btn-arrow" aria-hidden="true">→</span>
-      </button>
-    </form>
-
-    <!-- RIGHT SIDEBAR: LIVE FEED & FLEET UNITS -->
-    <div class="side-stack">
-      <aside class="card notif-card" aria-labelledby="notifTitle">
+      <!-- REPORT FORM -->
+      <form id="reportForm" class="card form-card" novalidate>
         <div class="card-header">
-          <h3 id="notifTitle">
-            <span class="header-icon" aria-hidden="true">📻</span> <span id="notifTitleText">Live Feed</span>
+          <h3 id="reportTitle">
+            <span class="header-icon" aria-hidden="true">📡</span> <span id="reportTitleText">Report Emergency</span>
           </h3>
-          <div class="card-glow notif-glow" aria-hidden="true"></div>
+          <div class="card-glow" aria-hidden="true"></div>
         </div>
-        <div id="notifications" aria-live="polite"></div>
-      </aside>
 
-      <!-- RESPONSE UNITS & FLEET (Visible to Staff) -->
-      <section id="unitsSection" class="card hidden" aria-labelledby="unitsTitle">
-        <div class="card-header">
-          <h3 id="unitsTitle"><span class="header-icon" aria-hidden="true">🚓</span> Response Units &amp; Fleet</h3>
+        <!-- TYPE SELECTOR -->
+        <div class="type-label" id="typeGroupLabel">Emergency Type</div>
+        <div class="type-pills" id="typePills" role="radiogroup" aria-labelledby="typeGroupLabel">
+          <button type="button" class="type-pill fire-pill active" data-val="Fire" role="radio" aria-checked="true">🔥 Fire</button>
+          <button type="button" class="type-pill med-pill" data-val="Medical" role="radio" aria-checked="false">🏥 Medical</button>
+          <button type="button" class="type-pill acc-pill" data-val="Accident" role="radio" aria-checked="false">🚗 Accident</button>
+          <button type="button" class="type-pill pol-pill" data-val="Police" role="radio" aria-checked="false">🚔 Police</button>
+          <button type="button" class="type-pill min-pill" data-val="Minor" role="radio" aria-checked="false">⚠️ Minor</button>
         </div>
-        <div id="unitsGrid" class="units-grid"></div>
+        <input type="hidden" id="type" value="Fire">
+
+        <!-- SEVERITY & PEOPLE AFFECTED -->
+        <div class="form-row-2col">
+          <div>
+            <label class="field-label" for="reportedSeverity">⚠️ Reported Severity</label>
+            <select id="reportedSeverity">
+              <option value="critical">Critical (Life-Threatening)</option>
+              <option value="high" selected>High (Urgent Response)</option>
+              <option value="moderate">Moderate</option>
+              <option value="low">Low / Non-Urgent</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="peopleAffected">👥 People Affected</label>
+            <input id="peopleAffected" type="number" min="1" max="10000" value="1" required>
+          </div>
+        </div>
+
+        <!-- VULNERABILITY FLAGS -->
+        <div class="field-label">🛡️ Vulnerability Flags</div>
+        <div class="vuln-flags" role="group" aria-label="Vulnerability indicators">
+          <label class="vuln-label"><input type="checkbox" class="vuln-checkbox" value="trapped"> Trapped Persons</label>
+          <label class="vuln-label"><input type="checkbox" class="vuln-checkbox" value="hazmat"> Chemical / Hazmat</label>
+          <label class="vuln-label"><input type="checkbox" class="vuln-checkbox" value="children"> Children Present</label>
+          <label class="vuln-label"><input type="checkbox" class="vuln-checkbox" value="elderly"> Elderly / Disabled</label>
+        </div>
+
+        <!-- LOCATION WITH AUTOCOMPLETE + GEOLOCATION -->
+        <label class="field-label" for="location">📍 Location</label>
+        <div class="location-wrapper">
+          <input id="location" placeholder="Search address, landmark, or drop pin on map..." autocomplete="off"
+            aria-autocomplete="list" aria-controls="locationDropdown" aria-expanded="false" required>
+          <button type="button" id="geoLocateBtn" class="map-btn" title="Use My Current GPS Location" aria-label="Use my current location">🎯 GPS</button>
+          <button type="button" id="showMapBtn" class="map-btn" title="Show on map" aria-label="Show location on map">🗺</button>
+          <div id="locationDropdown" class="location-dropdown hidden" role="listbox" aria-label="Location suggestions"></div>
+        </div>
+
+        <div id="map" class="map-container hidden" aria-label="Incident location map"></div>
+
+        <label class="field-label" for="distance">📏 Distance from Control Room (km, auto-calculated from coordinates)</label>
+        <input id="distance" placeholder="Auto-computed from coordinates (or enter km)" type="number" min="0" max="500" step="0.1" value="3.5" required>
+
+        <label class="field-label" for="description">📝 Incident Description</label>
+        <textarea id="description" placeholder="Describe the emergency situation, hazards, and landmarks..." rows="3" minlength="5" maxlength="2000" required></textarea>
+
+        <label class="field-label" for="image">📷 Attach Photo (optional, JPEG/PNG/WebP max 5MB)</label>
+        <div class="file-drop" id="fileDrop" tabindex="0" role="button" aria-label="Attach photo by clicking or dragging an image">
+          <span class="file-icon" aria-hidden="true">📸</span>
+          <span id="fileLabel">Click or drag &amp; drop image here</span>
+          <input type="file" id="image" accept="image/jpeg,image/png,image/webp" class="hidden">
+        </div>
+        <img id="imagePreview" src="" alt="Selected attachment preview" class="image-preview hidden">
+
+        <label class="consent-line">
+          <input type="checkbox" id="consentCheck" checked required>
+          <span>I confirm this report is genuine. False emergency reports are logged and may result in account suspension.</span>
+        </label>
+
+        <button type="submit" class="submit" id="submitBtn">
+          <span id="submitBtnText">🚨 Submit Emergency Report</span>
+          <span class="btn-arrow" aria-hidden="true">→</span>
+        </button>
+      </form>
+
+      <!-- CITIZEN LIVE TRACKING & FEED -->
+      <div class="side-stack">
+        <aside class="card notif-card" aria-labelledby="notifTitle">
+          <div class="card-header">
+            <h3 id="notifTitle">
+              <span class="header-icon" aria-hidden="true">📻</span> <span id="notifTitleText">Live Incident Updates</span>
+            </h3>
+            <div class="card-glow notif-glow" aria-hidden="true"></div>
+          </div>
+          <div id="notifications" aria-live="polite"></div>
+        </aside>
+
+        <!-- CITIZEN REPORTS & TRACKER -->
+        <section class="card" aria-label="My Reports &amp; Live Tracking">
+          <div class="card-header">
+            <h3><span class="header-icon" aria-hidden="true">📋</span> My Reports &amp; Live Tracking</h3>
+          </div>
+          <div id="citizenTrackingList" class="citizen-tracking-grid"></div>
+        </section>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RESPONDER MOBILE DATA TERMINAL (MDT) VIEW (For Police / Fire / Ambulance in Vehicle) -->
+  <div id="responderPortalView" class="hidden">
+    <div class="mdt-container">
+      <div class="mdt-terminal-header">
+        <div>
+          <div class="mdt-unit-callout">
+            <span aria-hidden="true">🚓</span> <span id="mdtUnitName">Unit Engine-01 (Fire &amp; Rescue)</span>
+          </div>
+          <p style="font-size:12px;color:var(--muted);margin-top:4px">Vehicle-Mounted Mobile Data Terminal · Operational Telemetry Active</p>
+        </div>
+        <div class="live-badge" style="font-size:12px;padding:6px 14px">
+          <span class="live-dot" aria-hidden="true"></span> MDT DISPATCH LINK ACTIVE
+        </div>
+      </div>
+      <div id="responderActiveCard" class="card">
+        <div class="card-header">
+          <h3><span class="header-icon" aria-hidden="true">⚡</span> Current Assigned Emergency Call</h3>
+        </div>
+        <div id="responderIncidentDetails" style="padding:10px 0">
+          <p style="color:var(--muted);font-size:14px">No active emergency calls currently dispatched to your unit. Standby for control room routing.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DISPATCHER / ADMIN CAD CONTROL ROOM VIEW -->
+  <div id="dispatcherPortalView">
+
+    <!-- STATUS BAR -->
+    <section class="status-bar" aria-label="Emergency status summary">
+      <div class="stat-chip fire-chip">🔥 Fire: <span id="count-fire">0</span></div>
+      <div class="stat-chip med-chip">🏥 Medical: <span id="count-medical">0</span></div>
+      <div class="stat-chip acc-chip">🚗 Accident: <span id="count-accident">0</span></div>
+      <div class="stat-chip pol-chip">🚔 Police: <span id="count-police">0</span></div>
+      <div class="stat-chip min-chip">⚠️ Minor: <span id="count-minor">0</span></div>
+      <div class="stat-chip total-chip">📋 Total: <span id="count-total">0</span></div>
+    </section>
+
+    <!-- DISPATCHER LIVE CLUSTERED MAP -->
+    <section id="operationsMapSection" class="dashboard" aria-label="Live Operations GIS Map">
+      <div class="card">
+        <div class="card-header">
+          <h3><span class="header-icon" aria-hidden="true">🗺️</span> Live CAD Tactical GIS Map (Incidents &amp; AVL Units with Clustering)</h3>
+        </div>
+        <div id="operationsMap" class="operations-map"></div>
+      </div>
+    </section>
+
+    <!-- RESPONSE UNITS & FLEET SECTION -->
+    <section id="unitsSection" class="dashboard" aria-labelledby="unitsTitle">
+      <div class="card">
+        <div class="card-header">
+          <h3 id="unitsTitle"><span class="header-icon" aria-hidden="true">🚓</span> Response Units &amp; Fleet Management</h3>
+        </div>
+        <div id="unitsGrid" class="units-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:16px"></div>
         <form id="createUnitForm" class="unit-create-form hidden">
-          <input id="unitName" placeholder="Unit Callsign (e.g. Engine-01)" required>
+          <h4 style="font-size:13px;color:var(--accent);margin-bottom:4px">+ Register New Fleet Response Unit</h4>
+          <input id="unitName" placeholder="Unit Callsign (e.g. Engine-01, Medic-04)" required>
           <div class="form-row-2col">
             <select id="unitType" aria-label="Unit capability type">
               <option value="Fire">Fire</option>
@@ -262,80 +348,70 @@
               <option value="Police">Police</option>
               <option value="Rescue">Rescue</option>
             </select>
-            <input id="unitCapacity" type="number" min="1" max="20" value="4" placeholder="Crew">
+            <input id="unitCapacity" type="number" min="1" max="20" value="4" placeholder="Crew Capacity">
           </div>
-          <input id="unitPhone" placeholder="Contact Phone (e.g. 112)" value="112">
-          <button type="submit" class="resolveBtn">+ Register Response Unit</button>
+          <input id="unitPhone" placeholder="Unit Radio / Contact Phone (e.g. 112)" value="112">
+          <button type="submit" class="resolveBtn">+ Register Unit into Fleet</button>
         </form>
-      </section>
-    </div>
+      </div>
+    </section>
+
+    <!-- ANALYTICS DASHBOARD -->
+    <section id="analyticsSection" class="dashboard" aria-label="Operations Analytics">
+      <div class="card">
+        <div class="card-header">
+          <h3><span class="header-icon" aria-hidden="true">📊</span> CAD Operations Analytics &amp; SLA Response Performance</h3>
+        </div>
+        <div id="analyticsContent"></div>
+      </div>
+    </section>
+
+    <!-- ADMIN USER & ROLE MANAGEMENT -->
+    <section id="adminUsersSection" class="dashboard hidden" aria-label="Admin Role Management">
+      <div class="card">
+        <div class="card-header">
+          <h3><span class="header-icon" aria-hidden="true">🛡️</span> Authority Role &amp; Access Management (Admin Only)</h3>
+        </div>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>User Email / UID</th>
+                <th>Assigned Role</th>
+              </tr>
+            </thead>
+            <tbody id="adminUsersBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- CAD INCIDENT CALL INTAKE & DISPATCH QUEUE -->
+    <section class="dashboard" aria-labelledby="dashboardTitle">
+      <div class="dashboard-header">
+        <h2 id="dashboardTitle">⚡ CAD Emergency Call Queue</h2>
+        <div class="dashboard-controls">
+          <input id="searchInput" type="search" placeholder="Search type, location, status..." aria-label="Search incidents" class="dash-search">
+          <select id="sortSelect" aria-label="Sort incidents" class="dash-sort">
+            <option value="priority">Sort: Priority &amp; Triage Score</option>
+            <option value="newest">Sort: Newest First</option>
+            <option value="distance">Sort: Nearest Distance</option>
+          </select>
+          <div class="filter-pills" id="filterPills" role="group" aria-label="Filter incidents by status">
+            <button type="button" class="filter-pill active" data-filter="all">All</button>
+            <button type="button" class="filter-pill" data-filter="Pending">Active</button>
+            <button type="button" class="filter-pill" data-filter="Resolved">Resolved</button>
+          </div>
+          <button type="button" id="exportCsvBtn" class="lang-btn">📥 Export CSV</button>
+        </div>
+      </div>
+      <div class="grid" id="emergencyGrid" aria-live="polite"></div>
+      <div class="pagination-bar">
+        <button type="button" id="loadMoreBtn" class="lang-btn">Load More Incidents</button>
+      </div>
+    </section>
 
   </div>
-
-  <!-- DISPATCHER / RESPONDER LIVE CLUSTERED MAP -->
-  <section id="operationsMapSection" class="dashboard hidden" aria-label="Live Operations GIS Map">
-    <div class="card">
-      <div class="card-header">
-        <h3><span class="header-icon" aria-hidden="true">🗺️</span> Live Operations GIS Map (Incidents &amp; Units with Spatial Clustering)</h3>
-      </div>
-      <div id="operationsMap" class="operations-map"></div>
-    </div>
-  </section>
-
-  <!-- ANALYTICS DASHBOARD (Dispatcher / Admin) -->
-  <section id="analyticsSection" class="dashboard hidden" aria-label="Operations Analytics">
-    <div class="card">
-      <div class="card-header">
-        <h3><span class="header-icon" aria-hidden="true">📊</span> Operations Analytics &amp; SLA Performance</h3>
-      </div>
-      <div id="analyticsContent"></div>
-    </div>
-  </section>
-
-  <!-- ADMIN USER & ROLE MANAGEMENT -->
-  <section id="adminUsersSection" class="dashboard hidden" aria-label="Admin Role Management">
-    <div class="card">
-      <div class="card-header">
-        <h3><span class="header-icon" aria-hidden="true">🛡️</span> User &amp; Role Management (Admin Only)</h3>
-      </div>
-      <div class="table-wrap">
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>User Email / UID</th>
-              <th>Assigned Role</th>
-            </tr>
-          </thead>
-          <tbody id="adminUsersBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- DASHBOARD -->
-  <section class="dashboard" aria-labelledby="dashboardTitle">
-    <div class="dashboard-header">
-      <h2 id="dashboardTitle">⚡ Emergency Dashboard</h2>
-      <div class="dashboard-controls">
-        <input id="searchInput" type="search" placeholder="Search type, location, status..." aria-label="Search incidents" class="dash-search">
-        <select id="sortSelect" aria-label="Sort incidents" class="dash-sort">
-          <option value="priority">Sort: Priority &amp; Triage Score</option>
-          <option value="newest">Sort: Newest First</option>
-          <option value="distance">Sort: Nearest Distance</option>
-        </select>
-        <div class="filter-pills" id="filterPills" role="group" aria-label="Filter incidents by status">
-          <button type="button" class="filter-pill active" data-filter="all">All</button>
-          <button type="button" class="filter-pill" data-filter="Pending">Active</button>
-          <button type="button" class="filter-pill" data-filter="Resolved">Resolved</button>
-        </div>
-        <button type="button" id="exportCsvBtn" class="lang-btn">📥 Export CSV</button>
-      </div>
-    </div>
-    <div class="grid" id="emergencyGrid" aria-live="polite"></div>
-    <div class="pagination-bar">
-      <button type="button" id="loadMoreBtn" class="lang-btn">Load More Incidents</button>
-    </div>
-  </section>
 
 </div>
 

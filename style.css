@@ -70,9 +70,134 @@ body {
   position: relative; z-index: 2;
   background: rgba(10,22,40,0.92);
   border: 1px solid rgba(56,189,248,0.3);
-  border-radius: 16px; padding: 36px 32px; width: 340px;
+  border-radius: 16px; padding: 36px 32px; width: 380px;
   box-shadow: 0 0 60px rgba(56,189,248,0.1), 0 0 120px rgba(56,189,248,0.05);
   backdrop-filter: blur(10px);
+}
+
+.portal-tabs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  background: rgba(4, 11, 24, 0.7); padding: 5px;
+  border-radius: 10px; border: 1px solid var(--border);
+  margin-bottom: 18px;
+}
+.portal-tab {
+  background: transparent; border: none; color: var(--muted);
+  font-family: var(--font-head); font-size: 13px; font-weight: 700;
+  padding: 8px 10px; border-radius: 7px; cursor: pointer;
+  letter-spacing: 0.5px; transition: all 0.2s;
+}
+.portal-tab.active {
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+  color: #fff; box-shadow: 0 2px 12px rgba(14, 165, 233, 0.35);
+}
+.portal-tab[data-portal="authority"].active {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 2px 12px rgba(245, 158, 11, 0.35);
+}
+
+/* ============ QUICK DEMO BUTTONS ============ */
+.quick-demo-box {
+  margin-top: 18px; padding-top: 14px;
+  border-top: 1px dashed rgba(56, 189, 248, 0.25);
+  text-align: center;
+}
+.quick-demo-title {
+  font-family: var(--font-head); font-size: 11px; font-weight: 700;
+  color: var(--accent); letter-spacing: 1.5px; margin-bottom: 8px;
+}
+.quick-demo-buttons {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+}
+.demo-pill {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); padding: 7px 4px; border-radius: 6px;
+  font-family: var(--font-head); font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.demo-pill:hover {
+  border-color: var(--accent); color: var(--accent);
+  background: rgba(56, 189, 248, 0.1); transform: translateY(-1px);
+}
+
+/* ============ STATUS STEPPER (CITIZEN LIVE TRACKING) ============ */
+.citizen-tracking-grid {
+  display: flex; flex-direction: column; gap: 16px; margin-top: 14px;
+}
+.tracking-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 18px; position: relative; overflow: hidden;
+}
+.tracking-card-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+}
+.status-stepper {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 16px 0 12px; padding: 10px 0; overflow-x: auto;
+}
+.step-node {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  min-width: 65px; text-align: center; font-size: 10px; color: var(--muted);
+  font-family: var(--font-head); font-weight: 700; text-transform: uppercase;
+}
+.step-dot {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--surface2); border: 2px solid var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--muted); transition: all 0.2s;
+}
+.step-node.completed .step-dot {
+  background: #22c55e; border-color: #22c55e; color: #000;
+}
+.step-node.active .step-dot {
+  background: var(--accent); border-color: #fff; color: #000;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.7);
+}
+.step-node.completed, .step-node.active {
+  color: var(--text);
+}
+.step-connector {
+  flex: 1; height: 2px; background: rgba(255, 255, 255, 0.1); margin: 0 4px -14px;
+}
+.step-connector.completed {
+  background: #22c55e;
+}
+
+/* ============ RESPONDER MDT VEHICLE TERMINAL ============ */
+.mdt-container {
+  padding: 16px 32px 32px;
+}
+.mdt-terminal-header {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(14, 165, 233, 0.1));
+  border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px;
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;
+}
+.mdt-unit-callout {
+  font-family: var(--font-head); font-size: 1.4rem; font-weight: 700; color: #38bdf8;
+  display: flex; align-items: center; gap: 8px;
+}
+.mdt-tactical-buttons {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px; margin-top: 18px;
+}
+.mdt-btn {
+  padding: 16px 14px; border-radius: 10px; border: none; color: #fff;
+  font-family: var(--font-head); font-size: 16px; font-weight: 700;
+  letter-spacing: 1px; cursor: pointer; transition: transform 0.15s, box-shadow 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.mdt-btn:hover { transform: translateY(-2px); }
+.mdt-btn-enroute {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 4px 18px rgba(245, 158, 11, 0.35);
+}
+.mdt-btn-onscene {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  box-shadow: 0 4px 18px rgba(59, 130, 246, 0.35);
+}
+.mdt-btn-resolve {
+  background: linear-gradient(135deg, #22c55e, #15803d);
+  box-shadow: 0 4px 18px rgba(34, 197, 94, 0.35);
 }
 
 .auth-logo {

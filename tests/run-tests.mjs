@@ -49,4 +49,23 @@ describe("CERS Production Verification Suite", () => {
     assert.ok(html.includes('integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="'));
     assert.ok(!html.includes("onclick="), "No inline onclick attributes in index.html");
   });
+
+  it("implements isolated public safety portals (Citizen, Dispatcher CAD, Responder MDT)", () => {
+    const html = readFileSync("index.html", "utf8");
+    assert.ok(html.includes('id="citizenPortalView"'), "Has dedicated citizen view");
+    assert.ok(html.includes('id="responderPortalView"'), "Has dedicated responder vehicle terminal");
+    assert.ok(html.includes('id="dispatcherPortalView"'), "Has dedicated dispatcher CAD command view");
+    assert.ok(
+      html.includes('id="tabCitizenPortal"') && html.includes('id="tabAuthorityPortal"'),
+      "Has Citizen vs Authority login tabs"
+    );
+    assert.ok(html.includes('id="citizenTrackingList"'), "Has live milestone incident tracking stepper");
+
+    const js = readFileSync("emergency.js", "utf8");
+    assert.ok(js.includes("renderCitizenTrackingList"), "Implements citizen incident tracking stepper");
+    assert.ok(js.includes("renderResponderMdtView"), "Implements responder tactical MDT");
+    assert.ok(js.includes("loginAsDemo"), "Implements one-click demo access for evaluators");
+    assert.ok(!js.includes("infoRow.innerHTML = `"), "No unsafe innerHTML template strings");
+  });
 });
+

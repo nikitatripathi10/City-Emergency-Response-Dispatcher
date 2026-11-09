@@ -116,6 +116,33 @@ Enforced in [`firestore.rules`](./firestore.rules), [`storage.rules`](./storage.
 
 ---
 
+## 🖥️ Operational Portals (Real-World CAD Design)
+
+CERS separates public reporting from internal public safety command into 3 purpose-built operational interfaces:
+
+1. **👤 Citizen Portal**:
+   - **Outward-facing public SOS interface** with national emergency helpline hotlinks (112, 100, 101, 102, 108).
+   - **Privacy Protection**: Citizens only see their own tickets — they cannot inspect other victims' private emergency reports or track police/fire tactical unit positions.
+   - **Live Milestone Progress Stepper**: Real-time 6-stage tracker (`Reported → Verified → Dispatched → En Route → On Scene → Resolved`) with post-resolution star rating (`1..5`) and feedback.
+
+2. **🎧 Dispatcher CAD Command Room**:
+   - **High-density emergency call queue** sorted by composite triage priority score (`0..100`).
+   - **Interactive Leaflet GIS Map**: Displays color-coded emergency markers and real-time AVL vehicle telemetry.
+   - **Unit Dispatch Engine**: Suggests nearest available unit of the matching department with calculated distance and ETA.
+   - **Command Tools**: Soft-delete/archive (with immutable audit trail), CSV export, SLA analytics dashboard, and role management.
+
+3. **🚓 Responder MDT (Mobile Data Terminal)**:
+   - **In-vehicle touch terminal** optimized for patrol cars, fire trucks, and ambulances.
+   - **Tactical Briefing**: Displays assigned incident coordinates, impact severity, hazard flags (hazmat, elderly, trapped), and situation notes.
+   - **Thumb-Friendly One-Tap Action Buttons**:
+     - `[ 🚨 1. ACCEPT & EN ROUTE ]` → Updates status to `en_route` and appends timestamped event to timeline.
+     - `[ 📍 2. ARRIVED ON SCENE ]` → Updates status to `on_scene` and notifies dispatcher control base.
+     - `[ ✔️ 3. RESOLVE & CLEAR ]` → Clears incident, records resolution timestamp, and frees vehicle back to available status.
+
+> ⚡ **Evaluator Quick Demo Access**: The login screen includes 3 one-click demo pills (`👤 Citizen Portal`, `🎧 Dispatcher CAD`, `🚓 Responder MDT`) pre-populated with live mock incidents and response units so evaluators can test the entire workflow end-to-end without needing to create credentials.
+
+---
+
 ## 🚀 Quickstart (Under 15 Minutes)
 
 ### Prerequisites
