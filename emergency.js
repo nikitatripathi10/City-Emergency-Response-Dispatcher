@@ -20,7 +20,7 @@ let emergencies = [];
 let signupMode = false;
 let lang = "en";
 let map;
-let listenerActive = false;
+let unsubscribeEmergencies = null;
 let ddItems = [];       // dropdown result list
 let ddActiveIdx = -1;   // keyboard nav index
 let ddDebounce = null;  // debounce timer
@@ -40,11 +40,14 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     document.getElementById("authPage").classList.add("hidden");
     document.getElementById("app").classList.remove("hidden");
-    if (!listenerActive) { loadEmergencies(); listenerActive = true; }
+    if (!unsubscribeEmergencies) { loadEmergencies(); }
   } else {
     document.getElementById("authPage").classList.remove("hidden");
     document.getElementById("app").classList.add("hidden");
-    listenerActive = false;
+    if (unsubscribeEmergencies) {
+      unsubscribeEmergencies();
+      unsubscribeEmergencies = null;
+    }
   }
 });
 
@@ -140,8 +143,8 @@ function renderDropdown(results) {
     div.innerHTML = `
       <span class="dd-icon">📍</span>
       <div>
-        <div class="dd-main">${main}</div>
-        ${sub ? `<div class="dd-sub">${sub}</div>` : ""}
+        <div class="dd-main">${escapeHTML(main)}</div>
+        ${sub ? `<div class="dd-sub">${escapeHTML(sub)}</div>` : ""}
       </div>`;
 
     div.addEventListener("mousedown", (e) => {
@@ -205,7 +208,7 @@ function showLocationCoords(lat, lon, label) {
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19, attribution: "© OpenStreetMap"
   }).addTo(map);
-  L.marker([lat, lon]).addTo(map).bindPopup(`📍 ${label}`).openPopup();
+  L.marker([lat, lon]).addTo(map).bindPopup(`📍 ${escapeHTML(label)}`).openPopup();
 }
 
 function showLocation() {
@@ -270,7 +273,7 @@ function handleDrop(e) {
 
 // ============ LOAD FIREBASE ============
 function loadEmergencies() {
-  onSnapshot(collection(db, "emergencies"), (snapshot) => {
+  unsubscribeEmergencies = onSnapshot(collection(db, "emergencies"), (snapshot) => {
     emergencies = [];
     snapshot.forEach((docSnap) => {
       emergencies.push({ id: docSnap.id, ...docSnap.data() });
