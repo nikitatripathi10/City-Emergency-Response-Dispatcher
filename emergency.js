@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, setDoc, updateDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCsQyW9xmh1lXSYY8oPmFGAETUquWJI8JY",
@@ -20,6 +20,8 @@ let emergencies = [];
 let signupMode = false;
 let lang = "en";
 let map;
+let currentUser = null;
+let currentUserRole = "citizen"; // 'citizen' | 'responder' | 'dispatcher' | 'admin'
 let unsubscribeEmergencies = null;
 let ddItems = [];       // dropdown result list
 let ddActiveIdx = -1;   // keyboard nav index
@@ -35,13 +37,43 @@ const TYPE_COLORS = {
   Minor:    { hex: "#ab47bc", emoji: "⚠️", class: "banner-minor" },
 };
 
-// ============ AUTH STATE ============
-onAuthStateChanged(auth, (user) => {
+// ============ AUTH STATE & RBAC ============
+async function resolveUserRole(user) {
+  try {
+    const tokenResult = await user.getIdTokenResult();
+    if (tokenResult.claims && tokenResult.claims.role) {
+      return String(tokenResult.claims.role);
+    }
+    const userRef = doc(db, "users", user.uid);
+    const snap = await getDoc(userRef);
+    if (snap.exists() && snap.data().role) {
+      return String(snap.data().role);
+    }
+    await setDoc(userRef, {
+      uid: user.uid,
+      email: user.email || "",
+      role: "citizen",
+      preferredLang: lang,
+      createdAt: serverTimestamp()
+    }, { merge: true });
+  } catch (err) {
+    console.warn("Could not resolve user role, defaulting to citizen:", err);
+  }
+  return "citizen";
+}
+
+onAuthStateChanged(auth, async (user) => {
   if (user) {
+    currentUser = user;
+    currentUserRole = await resolveUserRole(user);
+    const roleLabel = document.getElementById("roleLabel");
+    if (roleLabel) roleLabel.textContent = currentUserRole.toUpperCase();
     document.getElementById("authPage").classList.add("hidden");
     document.getElementById("app").classList.remove("hidden");
     if (!unsubscribeEmergencies) { loadEmergencies(); }
   } else {
+    currentUser = null;
+    currentUserRole = "citizen";
     document.getElementById("authPage").classList.remove("hidden");
     document.getElementById("app").classList.add("hidden");
     if (unsubscribeEmergencies) {
@@ -273,14 +305,23 @@ function handleDrop(e) {
 
 // ============ LOAD FIREBASE ============
 function loadEmergencies() {
-  unsubscribeEmergencies = onSnapshot(collection(db, "emergencies"), (snapshot) => {
+  const baseCol = collection(db, "emergencies");
+  const q = currentUserRole === "citizen" && currentUser
+    ? query(baseCol, where("reporterUid", "==", currentUser.uid))
+    : baseCol;
+
+  unsubscribeEmergencies = onSnapshot(q, (snapshot) => {
     emergencies = [];
     snapshot.forEach((docSnap) => {
-      emergencies.push({ id: docSnap.id, ...docSnap.data() });
+      const data = docSnap.data();
+      if (data.archived && currentUserRole !== "admin") return;
+      emergencies.push({ id: docSnap.id, ...data });
     });
     emergencies.sort((a, b) => {
       if (a.weight !== b.weight) return a.weight - b.weight;
-      return a.timestamp - b.timestamp;
+      const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.timestamp || 0);
+      const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.timestamp || 0);
+      return tA - tB;
     });
     updateStatusCounts();
     smartRender();
@@ -322,6 +363,8 @@ async function reportEmergency() {
     return;
   }
 
+  if (!currentUser) { alert("You must be signed in to report an emergency."); return; }
+
   const btn = document.getElementById("submitBtn");
   btn.innerHTML = "<span>⏳ Submitting...</span>";
   btn.disabled = true;
@@ -336,14 +379,19 @@ async function reportEmergency() {
 
   try {
     await addDoc(collection(db, "emergencies"), {
+      uid: currentUser.uid,
+      reporterUid: currentUser.uid,
       type, location, desc,
       distance: Number(distance),
       img: imgURL,
       priority: priorityData.level,
       weight: priorityData.weight,
       status: "Pending",
+      archived: false,
       rating: null,
       feedback: "",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
       timestamp: Date.now()
     });
 
@@ -473,6 +521,10 @@ function smartRender() {
       const statusIcon = e.status === "Pending" ? "🟡" : "✅";
       const globalIdx = emergencies.indexOf(e);
 
+      const isStaff = ["responder", "dispatcher", "admin"].includes(currentUserRole);
+      const isAdmin = currentUserRole === "admin";
+      const isOwner = currentUser && (e.reporterUid === currentUser.uid || e.uid === currentUser.uid);
+
       card.innerHTML = `
         <div class="card-type-banner ${tc.class}"></div>
         ${imageSection}
@@ -485,10 +537,12 @@ function smartRender() {
           <div class="ec-info"><span>📏</span><span><strong>${safeDistance} km</strong> from control</span></div>
           <p class="ec-desc">${safeDesc}</p>
           <div class="status ${statusClass}">${statusIcon} <b>${safeStatus}</b></div>
-          ${e.status === "Pending"
+          ${e.status === "Pending" && isStaff
             ? `<button class="resolveBtn" onclick="window.resolve('${e.id}')">✔ Mark as Resolved</button>`
-            : `<div class="feedbackDiv">${feedbackHTML(globalIdx)}</div>`}
-          <button class="deleteBtn" onclick="window.deleteEmergency('${e.id}')">🗑️ Delete Report</button>
+            : e.status !== "Pending" && (isOwner || isStaff)
+              ? `<div class="feedbackDiv">${feedbackHTML(globalIdx)}</div>`
+              : ""}
+          ${isAdmin ? `<button class="deleteBtn" onclick="window.deleteEmergency('${e.id}')">🗑️ Archive Report</button>` : ""}
         </div>`;
       grid.appendChild(card);
     }
@@ -499,17 +553,38 @@ function smartRender() {
 
 // ============ RESOLVE ============
 async function resolve(id) {
+  if (!["responder", "dispatcher", "admin"].includes(currentUserRole)) {
+    alert("Only authorized responders, dispatchers, or admins can resolve incidents.");
+    return;
+  }
   try {
-    await updateDoc(doc(db, "emergencies", id), { status: "Resolved" });
+    await updateDoc(doc(db, "emergencies", id), {
+      status: "Resolved",
+      updatedAt: serverTimestamp()
+    });
   } catch (err) { alert("Error resolving: " + err.message); }
 }
 
-// ============ DELETE ============
+// ============ SOFT DELETE / ARCHIVE (ADMIN ONLY) ============
 async function deleteEmergency(id) {
-  if (!confirm("Delete this emergency report?")) return;
+  if (currentUserRole !== "admin") {
+    alert("Only administrators can archive emergency reports.");
+    return;
+  }
+  if (!confirm("Archive this emergency report?")) return;
   try {
-    await deleteDoc(doc(db, "emergencies", id));
-  } catch (err) { alert("Error deleting: " + err.message); }
+    await updateDoc(doc(db, "emergencies", id), {
+      archived: true,
+      updatedAt: serverTimestamp()
+    });
+    await addDoc(collection(db, "auditLogs"), {
+      incidentId: id,
+      actorUid: currentUser.uid,
+      actorRole: currentUserRole,
+      action: "archived",
+      createdAt: serverTimestamp()
+    });
+  } catch (err) { alert("Error archiving: " + err.message); }
 }
 
 // ============ FEEDBACK ============

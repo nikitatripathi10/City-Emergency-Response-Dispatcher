@@ -1,0 +1,33 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isStaff() {
+      return isSignedIn() && request.auth.token.get('role', 'citizen') in ['responder', 'dispatcher', 'admin'];
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.get('role', 'citizen') == 'admin';
+    }
+
+    // Incident media uploads: /incident-media/{uid}/{incidentId}/{fileName}
+    match /incident-media/{uid}/{incidentId}/{fileName} {
+      // Reporter can read their own uploaded media; staff (responder/dispatcher/admin) can read all
+      allow read: if isSignedIn() && (request.auth.uid == uid || isStaff());
+
+      // Only the authenticated reporter can upload an image <= 5 MiB of type JPEG, PNG, or WebP
+      allow create, update: if isSignedIn()
+                            && request.auth.uid == uid
+                            && request.resource != null
+                            && request.resource.size <= 5 * 1024 * 1024
+                            && request.resource.contentType.matches('image/(jpeg|png|webp)');
+
+      // Only admins can delete stored incident media
+      allow delete: if isAdmin();
+    }
+  }
+}

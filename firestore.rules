@@ -1,0 +1,213 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // Helper Functions
+    // =========================================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return request.auth.token.get('role',
+        exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'citizen')
+          : 'citizen'
+      );
+    }
+
+    function isCitizen() {
+      return isSignedIn() && getUserRole() == 'citizen';
+    }
+
+    function isResponder() {
+      return isSignedIn() && getUserRole() == 'responder';
+    }
+
+    function isDispatcher() {
+      return isSignedIn() && getUserRole() == 'dispatcher';
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getUserRole() == 'admin';
+    }
+
+    function isDispatcherOrAdmin() {
+      return isSignedIn() && (getUserRole() == 'dispatcher' || getUserRole() == 'admin');
+    }
+
+    function isStaff() {
+      return isSignedIn() && (
+        getUserRole() == 'responder' ||
+        getUserRole() == 'dispatcher' ||
+        getUserRole() == 'admin'
+      );
+    }
+
+    function isValidEmergencyType(t) {
+      return t in ['Fire', 'Medical', 'Accident', 'Police', 'Minor'];
+    }
+
+    function isValidTransition(fromState, toState) {
+      return (fromState == 'reported' && toState in ['verified', 'assigned', 'false_alarm', 'cancelled']) ||
+             (fromState == 'Pending' && toState in ['verified', 'assigned', 'resolved', 'Resolved', 'false_alarm', 'cancelled']) ||
+             (fromState == 'verified' && toState in ['assigned', 'false_alarm', 'cancelled']) ||
+             (fromState == 'assigned' && toState in ['en_route', 'on_scene', 'resolved', 'cancelled']) ||
+             (fromState == 'en_route' && toState in ['on_scene', 'resolved']) ||
+             (fromState == 'on_scene' && toState in ['resolved']) ||
+             (fromState == 'resolved' && toState in ['closed']) ||
+             (fromState == 'Resolved' && toState in ['closed']);
+    }
+
+    function isValidResponderTransition(fromState, toState) {
+      return (fromState == 'assigned' && toState == 'en_route') ||
+             (fromState == 'en_route' && toState == 'on_scene') ||
+             (fromState == 'on_scene' && toState == 'resolved');
+    }
+
+    // =========================================================================
+    // Users Collection (/users/{userId})
+    // =========================================================================
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isDispatcherOrAdmin());
+
+      // Users can create their own profile only with the default 'citizen' role
+      allow create: if isSignedIn()
+                    && request.auth.uid == userId
+                    && request.resource.data.uid == userId
+                    && request.resource.data.role == 'citizen';
+
+      // Users can update non-privileged profile fields (preferredLang, displayName, fcmTokens);
+      // Only admins can modify 'role' or 'unitId'.
+      allow update: if isAdmin() || (
+                      isSignedIn()
+                      && request.auth.uid == userId
+                      && request.resource.data.role == resource.data.role
+                      && request.resource.data.get('unitId', null) == resource.data.get('unitId', null)
+                    );
+
+      // Users can delete their own profile (GDPR/DPDP right to erasure) or admin
+      allow delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // =========================================================================
+    // Emergencies Collection (/emergencies/{incidentId})
+    // =========================================================================
+    match /emergencies/{incidentId} {
+      // Citizens can ONLY read their own non-archived reports.
+      // Responders & Dispatchers can read all non-archived reports.
+      // Admins can read all reports (including archived).
+      allow read: if isAdmin() || (
+                    isSignedIn()
+                    && resource.data.get('archived', false) == false
+                    && (
+                      isStaff() ||
+                      resource.data.get('reporterUid', resource.data.get('uid', '')) == request.auth.uid
+                    )
+                  );
+
+      // Every report must store the authenticated reporter's UID and server timestamp
+      allow create: if isSignedIn()
+                    && request.resource.data.reporterUid == request.auth.uid
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.createdAt == request.time
+                    && isValidEmergencyType(request.resource.data.type)
+                    && request.resource.data.status in ['reported', 'Pending']
+                    && request.resource.data.get('archived', false) == false
+                    && request.resource.data.get('desc', '').size() >= 3
+                    && request.resource.data.get('desc', '').size() <= 2000;
+
+      allow update: if isSignedIn() && (
+        // 1. Citizen rating/feedback on their own resolved/closed incident
+        (
+          resource.data.get('reporterUid', resource.data.get('uid', '')) == request.auth.uid
+          && resource.data.status in ['resolved', 'closed', 'Resolved']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'feedback', 'updatedAt'])
+          && request.resource.data.rating is int
+          && request.resource.data.rating >= 1
+          && request.resource.data.rating <= 5
+          && request.resource.data.feedback is string
+          && request.resource.data.feedback.size() <= 1000
+        )
+        ||
+        // 2. Citizen cancelling their own unassigned 'reported' incident
+        (
+          resource.data.get('reporterUid', resource.data.get('uid', '')) == request.auth.uid
+          && resource.data.status in ['reported', 'Pending']
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        )
+        ||
+        // 3. Responder progressing assigned incident state (assigned -> en_route -> on_scene -> resolved)
+        (
+          isResponder()
+          && isValidResponderTransition(resource.data.status, request.resource.data.status)
+          && request.resource.data.get('archived', false) == resource.data.get('archived', false)
+          && request.resource.data.reporterUid == resource.data.reporterUid
+        )
+        ||
+        // 4. Dispatcher updating workflow state, unit assignments, verification, or abuse flags (cannot archive)
+        (
+          isDispatcher()
+          && (
+            request.resource.data.status == resource.data.status ||
+            isValidTransition(resource.data.status, request.resource.data.status)
+          )
+          && request.resource.data.get('archived', false) == resource.data.get('archived', false)
+          && request.resource.data.get('reporterUid', '') == resource.data.get('reporterUid', '')
+        )
+        ||
+        // 5. Admin full operational control including soft-delete (archived = true)
+        (
+          isAdmin()
+          && (
+            request.resource.data.status == resource.data.status ||
+            isValidTransition(resource.data.status, request.resource.data.status)
+          )
+        )
+      );
+
+      // Hard deletes are strictly forbidden; use soft-delete (archived: true) by Admin
+      allow delete: if false;
+
+      // -----------------------------------------------------------------------
+      // Incident Timeline Subcollection (/emergencies/{incidentId}/timeline/{eventId})
+      // -----------------------------------------------------------------------
+      match /timeline/{eventId} {
+        allow read: if isStaff() || (
+                      isSignedIn() &&
+                      get(/databases/$(database)/documents/emergencies/$(incidentId)).data.get('reporterUid', '') == request.auth.uid
+                    );
+        allow create: if isSignedIn()
+                      && request.resource.data.actorUid == request.auth.uid
+                      && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+    }
+
+    // =========================================================================
+    // Response Units Collection (/units/{unitId})
+    // =========================================================================
+    match /units/{unitId} {
+      allow read: if isStaff();
+      allow create, delete: if isDispatcherOrAdmin();
+      allow update: if isDispatcherOrAdmin() || (
+                      isResponder() &&
+                      request.auth.uid in resource.data.get('memberUids', [])
+                    );
+    }
+
+    // =========================================================================
+    // Immutable Audit Logs Collection (/auditLogs/{logId})
+    // =========================================================================
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn()
+                    && request.resource.data.actorUid == request.auth.uid
+                    && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "city-emergency-dispatcher",
+    "dev": "city-emergency-dispatcher-dev",
+    "staging": "city-emergency-dispatcher-staging",
+    "prod": "city-emergency-dispatcher"
+  }
+}
