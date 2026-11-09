@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous"/>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet" crossorigin="anonymous">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -120,8 +121,14 @@
       </div>
     </div>
     <div class="nav-actions">
-      <div class="live-badge" id="roleBadge" title="Authenticated Role">
-        <span aria-hidden="true">👤</span> <span id="roleLabel">CITIZEN</span>
+      <div class="live-badge" id="roleBadge" title="Active Role (Switch to preview portals)">
+        <span aria-hidden="true">👤</span>
+        <select id="roleSwitcher" aria-label="Active User Role" style="background:transparent;border:none;color:inherit;font-weight:700;font-size:11px;padding:0 4px;cursor:pointer;width:auto">
+          <option value="citizen" style="background:#0a1628;color:#e2e8f0">CITIZEN</option>
+          <option value="responder" style="background:#0a1628;color:#e2e8f0">RESPONDER</option>
+          <option value="dispatcher" style="background:#0a1628;color:#e2e8f0">DISPATCHER</option>
+          <option value="admin" style="background:#0a1628;color:#e2e8f0">ADMIN</option>
+        </select>
       </div>
       <div class="live-badge" aria-label="Live connection active">
         <span class="live-dot" aria-hidden="true"></span> LIVE
@@ -332,6 +339,6 @@
 
 </div>
 
-<script type="module" src="/src/main.ts"></script>
+<script type="module" src="/emergency.js"></script>
 </body>
 </html>
