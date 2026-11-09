@@ -85,26 +85,26 @@
       <span class="logo-text">CERS</span>
     </div>
 
-    <!-- CITIZEN VS AUTHORITY PORTAL TABS -->
+    <!-- CITIZEN VS DEPARTMENT STAFF TABS -->
     <div class="portal-tabs" role="tablist" aria-label="Select Login Portal">
       <button type="button" class="portal-tab active" id="tabCitizenPortal" data-portal="citizen" role="tab" aria-selected="true">
-        👤 Citizen Portal
+        👤 Public Citizen Access
       </button>
       <button type="button" class="portal-tab" id="tabAuthorityPortal" data-portal="authority" role="tab" aria-selected="false">
-        🛡️ Authority Login
+        🔒 Department Staff (112 / Field)
       </button>
     </div>
 
-    <h2 id="authTitle">Citizen Login</h2>
-    <p class="auth-sub" id="authSubtitle">Public Emergency Reporting &amp; Live Status Tracking</p>
+    <h2 id="authTitle">Public Citizen Access</h2>
+    <p class="auth-sub" id="authSubtitle">Report an emergency &amp; track assistance status in real time</p>
 
-    <!-- AUTHORITY DEPARTMENT / ROLE SELECTOR (Shown only when Authority Portal tab is active) -->
+    <!-- AUTHORITY DEPARTMENT / ROLE SELECTOR (Shown only when Department Staff tab is active) -->
     <div id="authorityRoleGroup" class="input-group hidden">
-      <label for="authorityRoleSelect" class="sr-only">Authority Role</label>
-      <select id="authorityRoleSelect" aria-label="Select Authority Role">
-        <option value="dispatcher">🎧 Control Room Dispatcher</option>
-        <option value="responder">🚓 Field Responder (Fire / Medical / Police)</option>
-        <option value="admin">🛡️ System Administrator</option>
+      <label for="authorityRoleSelect" class="sr-only">Department Staff Duty Role</label>
+      <select id="authorityRoleSelect" aria-label="Select Department Staff Duty Role">
+        <option value="dispatcher">🎧 Control Room Dispatcher (112 Call Center)</option>
+        <option value="responder">🚓 Field Responder (Police Car / Fire Truck / Ambulance)</option>
+        <option value="admin">🛡️ System Administrator (IT / Chief Supervisor)</option>
       </select>
     </div>
 
@@ -131,11 +131,11 @@
 
     <!-- QUICK DEMO ACCESS (For evaluators and testers) -->
     <div class="quick-demo-box">
-      <div class="quick-demo-title">⚡ QUICK DEMO ACCESS (ONE-CLICK)</div>
+      <div class="quick-demo-title">🎓 EVALUATOR DEMO (1-CLICK WORKFLOW PREVIEW)</div>
       <div class="quick-demo-buttons">
-        <button type="button" class="demo-pill" id="demoCitizenBtn">👤 Citizen Portal</button>
-        <button type="button" class="demo-pill" id="demoDispatcherBtn">🎧 Dispatcher CAD</button>
-        <button type="button" class="demo-pill" id="demoResponderBtn">🚓 Responder MDT</button>
+        <button type="button" class="demo-pill" id="demoCitizenBtn" title="Citizen SOS reporting & live milestone tracking">👤 Citizen Portal</button>
+        <button type="button" class="demo-pill" id="demoDispatcherBtn" title="112 Control Room: Live map, triage scores & unit dispatch">🎧 Dispatcher CAD</button>
+        <button type="button" class="demo-pill" id="demoResponderBtn" title="In-Vehicle MDT: Tactical briefing & En Route/On Scene buttons">🚓 Responder MDT</button>
       </div>
     </div>
   </form>
@@ -156,10 +156,10 @@
       <div class="live-badge" id="roleBadge" title="Active Role (Switch to preview portals)">
         <span aria-hidden="true">👤</span>
         <select id="roleSwitcher" aria-label="Active User Role" style="background:transparent;border:none;color:inherit;font-weight:700;font-size:11px;padding:0 4px;cursor:pointer;width:auto">
-          <option value="citizen" style="background:#0a1628;color:#e2e8f0">CITIZEN</option>
-          <option value="responder" style="background:#0a1628;color:#e2e8f0">RESPONDER</option>
-          <option value="dispatcher" style="background:#0a1628;color:#e2e8f0">DISPATCHER</option>
-          <option value="admin" style="background:#0a1628;color:#e2e8f0">ADMIN</option>
+          <option value="citizen" style="background:#0a1628;color:#e2e8f0">👤 CITIZEN (Public)</option>
+          <option value="dispatcher" style="background:#0a1628;color:#e2e8f0">🎧 DISPATCHER (112 Control Room)</option>
+          <option value="responder" style="background:#0a1628;color:#e2e8f0">🚓 RESPONDER (Vehicle MDT)</option>
+          <option value="admin" style="background:#0a1628;color:#e2e8f0">🛡️ ADMIN (IT / Supervisor)</option>
         </select>
       </div>
       <div class="live-badge" aria-label="Live connection active">

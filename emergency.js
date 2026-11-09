@@ -1944,17 +1944,17 @@ function applyTranslations() {
     "authTitle",
     isAuthority
       ? signupMode
-        ? "Authority Registration"
-        : "Authority Login"
+        ? "Department Staff Registration"
+        : "Department Staff Login"
       : signupMode
         ? t("signupTitle")
-        : "Citizen Login"
+        : "Public Citizen Access"
   );
   setTxt(
     "authSubtitle",
     isAuthority
-      ? "Control Room Dispatch, Field Responders & Administration"
-      : "Public Emergency Reporting & Live Status Tracking"
+      ? "112 Control Room Operators, Police / Fire Responders & Admins"
+      : "Report an emergency & track assistance status in real time"
   );
   setTxt("authSubmitText", signupMode ? t("signupBtn") : t("loginBtn"));
   setTxt("switchText", signupMode ? t("haveAccount") : t("noAccount"));
