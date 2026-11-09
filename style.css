@@ -1027,3 +1027,60 @@ body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::aft
   padding: 3px 6px;
   border-radius: 4px;
 }
+
+/* ============ COVERT PHYSICAL DURESS SENSORS ACTIVE CARD ============ */
+.covert-sensor-card {
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.12), rgba(30, 27, 75, 0.4));
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+.covert-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-head);
+  font-size: 13px;
+  color: #fda4af;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.covert-pulse-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f43f5e;
+  box-shadow: 0 0 10px #f43f5e;
+  animation: pulse-dot 1.2s infinite;
+}
+.covert-sub {
+  color: #cbd5e1;
+  font-size: 12px;
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+.covert-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.covert-pill {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: #f1f5f9;
+  font-size: 11px;
+  padding: 5px 9px;
+  border-radius: 6px;
+}
+.covert-pill strong {
+  color: #fda4af;
+}
+.covert-haptic-note {
+  font-size: 11px;
+  color: #94a3b8;
+  border-top: 1px dashed rgba(244, 63, 94, 0.25);
+  padding-top: 8px;
+}

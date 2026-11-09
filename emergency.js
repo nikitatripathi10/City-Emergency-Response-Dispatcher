@@ -613,6 +613,30 @@ function renderResponderMdtView() {
 
   infoRow.append(locDiv, sevDiv, hazDiv, descDiv);
 
+  // Tactical navigation & dispatch communication links
+  const navRow = document.createElement("div");
+  navRow.style.cssText = "display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap";
+
+  if (activeAssigned.coordinates) {
+    const navBtn = document.createElement("a");
+    navBtn.href = `https://www.google.com/maps/dir/?api=1&destination=${activeAssigned.coordinates.lat},${activeAssigned.coordinates.lng}`;
+    navBtn.target = "_blank";
+    navBtn.rel = "noopener noreferrer";
+    navBtn.className = "lang-btn";
+    navBtn.style.cssText =
+      "text-decoration:none;display:inline-flex;align-items:center;gap:6px;background:rgba(56,189,248,0.15);border:1px solid #38bdf8;color:#38bdf8;padding:8px 14px;border-radius:6px;font-weight:700";
+    navBtn.textContent = "🗺️ Launch Turn-by-Turn GPS Navigation";
+    navRow.appendChild(navBtn);
+  }
+
+  const callDispatchBtn = document.createElement("a");
+  callDispatchBtn.href = "tel:112";
+  callDispatchBtn.className = "lang-btn";
+  callDispatchBtn.style.cssText =
+    "text-decoration:none;display:inline-flex;align-items:center;gap:6px;background:rgba(239,68,68,0.15);border:1px solid #ef4444;color:#fca5a5;padding:8px 14px;border-radius:6px;font-weight:700";
+  callDispatchBtn.textContent = "📞 Tactical Radio / Call Control Room";
+  navRow.appendChild(callDispatchBtn);
+
   // Tactical one-tap milestone buttons
   const actionsGrid = document.createElement("div");
   actionsGrid.className = "mdt-tactical-buttons";
@@ -1634,7 +1658,7 @@ function renderFirstAidGuidance(protocolKey = "cpr") {
 }
 
 // ============ 2. 1-TAP SILENT POLICE SOS (STEALTH DURESS) ============
-async function triggerSilentSos() {
+async function triggerSilentSos(triggerMethod = "1-Tap Stealth SOS Button") {
   if (!currentUser) {
     currentUser = {
       uid: `silent-victim-${Date.now().toString(36)}`,
@@ -1643,12 +1667,19 @@ async function triggerSilentSos() {
     };
   }
 
-  showToast("Acquiring GPS for Silent Police SOS...", "info");
+  // Covert haptic vibration feedback (double buzz confirms dispatch silently in pocket)
+  if ("vibrate" in navigator) {
+    try {
+      navigator.vibrate([120, 80, 120]);
+    } catch {}
+  }
+
+  showToast(`COVERT DURESS DETECTED via [${triggerMethod}]. Transmitting GPS...`, "info");
 
   const submitSosWithCoords = async (coords) => {
     const locLabel = coords
-      ? `GPS (${coords.lat}, ${coords.lng}) [SILENT DURESS / INTRUSION]`
-      : "GPS Locked Location (Duress)";
+      ? `GPS (${coords.lat}, ${coords.lng}) [COVERT DURESS: ${triggerMethod}]`
+      : `GPS Locked Location [${triggerMethod}]`;
     const dist = coords
       ? computeHaversineKm(CONTROL_ROOM_COORDS.lat, CONTROL_ROOM_COORDS.lng, coords.lat, coords.lng)
       : 2.1;
@@ -1660,13 +1691,13 @@ async function triggerSilentSos() {
       type: "Police",
       reportedSeverity: "critical",
       peopleAffected: 1,
-      vulnerabilityFlags: ["silent_sos", "personal_danger", "trapped"],
+      vulnerabilityFlags: ["silent_sos", "personal_danger", "trapped", "covert_trigger"],
       location: locLabel,
-      desc: "🚨 SILENT POLICE SOS TRIGGERED: Victim is in immediate personal danger, domestic threat or intrusion and cannot speak. Dispatched to verified GPS location.",
+      desc: `🚨 COVERT POLICE DURESS DETECTED via [${triggerMethod}]: Victim is in immediate personal danger, domestic threat or intrusion and cannot safely look at phone or speak. Dispatched immediately to verified GPS location.`,
       coordinates: coords || { lat: 28.6139, lng: 77.209 },
       geohash: coords ? encodeGeohash(coords.lat, coords.lng) : "ttnfvh5qx",
       distance: dist,
-      priorityScore: 98,
+      priorityScore: 99,
       priority: "CRITICAL",
       weight: 1,
       status: "verified",
@@ -1692,7 +1723,7 @@ async function triggerSilentSos() {
       } else {
         smartRender();
       }
-      showToast("SILENT SOS TRANSMITTED. Police dispatched. Keep phone silent and concealed.", "success");
+      showToast(`SILENT SOS DISPATCHED via [${triggerMethod}]. Help is en route. Keep phone concealed.`, "success");
       return;
     }
 
@@ -1708,16 +1739,120 @@ async function triggerSilentSos() {
         actorRole: "citizen",
         action: "silent_sos_triggered",
         toState: "verified",
-        note: "One-tap stealth silent SOS activated. Priority 98 critical police response.",
+        note: `Covert emergency triggered via [${triggerMethod}]. Priority 99 critical police response dispatched.`,
         createdAt: serverTimestamp(),
       });
-      showToast("SILENT SOS TRANSMITTED. Police dispatched. Keep phone silent and concealed.", "success");
+      showToast(`SILENT SOS DISPATCHED via [${triggerMethod}]. Help is en route. Keep phone concealed.`, "success");
     } catch {
       emergencies.unshift(sosIncident);
       updateStatusCounts();
-      showToast("SILENT SOS TRANSMITTED (Cached). Police notified.", "success");
+      showToast(`SILENT SOS DISPATCHED (Cached) via [${triggerMethod}]. Police notified.`, "success");
     }
   };
+
+  if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        submitSosWithCoords({
+          lat: Math.round(pos.coords.latitude * 1000000) / 1000000,
+          lng: Math.round(pos.coords.longitude * 1000000) / 1000000,
+        });
+      },
+      () => {
+        submitSosWithCoords(selectedCoords || { lat: 28.6139, lng: 77.209 });
+      },
+      { timeout: 5000, enableHighAccuracy: true }
+    );
+  } else {
+    submitSosWithCoords(selectedCoords || { lat: 28.6139, lng: 77.209 });
+  }
+}
+
+// ============ COVERT PHYSICAL DURESS SENSORS & GESTURES ============
+let covertSensorsInitialized = false;
+
+function setupCovertPhysicalSensors() {
+  if (covertSensorsInitialized) return;
+  covertSensorsInitialized = true;
+
+  // 1. COVERT 2.5-SECOND POCKET HOLD (Long Press Anywhere on Screen)
+  let holdTimer = null;
+  const startHold = () => {
+    if (holdTimer) clearTimeout(holdTimer);
+    holdTimer = setTimeout(() => {
+      triggerSilentSos("Covert 2.5s Pocket Hold Gesture");
+      holdTimer = null;
+    }, 2500);
+  };
+  const cancelHold = () => {
+    if (holdTimer) {
+      clearTimeout(holdTimer);
+      holdTimer = null;
+    }
+  };
+
+  window.addEventListener("pointerdown", startHold, { passive: true });
+  window.addEventListener("pointerup", cancelHold, { passive: true });
+  window.addEventListener("pointercancel", cancelHold, { passive: true });
+
+  // 2. RAPID TRIPLE-TAP COVERT GESTURE (3 taps anywhere within 1200ms)
+  let tapHistory = [];
+  window.addEventListener(
+    "click",
+    (e) => {
+      if (e.target.closest("input, select, textarea, button, a")) return;
+      const now = Date.now();
+      tapHistory = tapHistory.filter((t) => now - t < 1200);
+      tapHistory.push(now);
+      if (tapHistory.length >= 3) {
+        tapHistory = [];
+        triggerSilentSos("Rapid Triple-Tap Screen Gesture");
+      }
+    },
+    { passive: true }
+  );
+
+  // 3. PANIC ACCELEROMETER SHAKE SENSOR (Struggle / Violent shaking detection)
+  let lastShakeTimestamp = 0;
+  let shakeStreak = 0;
+  if (typeof window !== "undefined" && "DeviceMotionEvent" in window) {
+    window.addEventListener(
+      "devicemotion",
+      (e) => {
+        const acc = e.accelerationIncludingGravity || e.acceleration;
+        if (!acc) return;
+        const mag = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2);
+        if (mag > 26) {
+          const now = Date.now();
+          if (now - lastShakeTimestamp < 1200) {
+            shakeStreak++;
+            if (shakeStreak >= 3) {
+              shakeStreak = 0;
+              triggerSilentSos("Panic Shake Motion Sensor");
+            }
+          } else {
+            shakeStreak = 1;
+          }
+          lastShakeTimestamp = now;
+        }
+      },
+      { passive: true }
+    );
+  }
+
+  // 4. HARDWARE KEY DURESS (Triple press of any physical key within 1500ms)
+  let keyHistory = [];
+  window.addEventListener("keydown", (e) => {
+    if (e.target.closest("input, textarea")) return;
+    const now = Date.now();
+    keyHistory = keyHistory.filter((t) => now - t < 1500);
+    keyHistory.push(now);
+    if (keyHistory.length >= 3) {
+      keyHistory = [];
+      triggerSilentSos("Hardware Key Duress (Triple-Press)");
+    }
+  });
+}
 
   if ("geolocation" in navigator) {
     navigator.geolocation.getCurrentPosition(
@@ -2505,6 +2640,9 @@ function loginAsDemo(role, email) {
 // ============ INIT EVENT LISTENERS ============
 function initApp() {
   applyTranslations();
+
+  // COVERT PHYSICAL SENSORS ACTIVE (Pocket hold 2.5s / Triple-tap / Accelerometer shake / Key duress)
+  setupCovertPhysicalSensors();
 
   // PRE-ARRIVAL FIRST AID PROTOCOLS ("THE GOLDEN 5 MINUTES")
   renderFirstAidGuidance("cpr");

@@ -147,9 +147,13 @@ CERS separates public reporting from internal public safety command into 3 purpo
 
 Traditional emergency CAD systems suffer from severe real-world bottlenecks. CERS introduces 3 cutting-edge capabilities specifically addressing those pain points:
 
-1. **🔕 One-Tap Silent Police SOS (Stealth Duress Trigger)**:
-   - **The Problem**: In hostage situations, domestic violence, stalking, or burglary intrusions, victims **cannot speak out loud** without endangering their lives.
-   - **The Solution**: A prominent 1-tap stealth trigger that automatically locks onto high-accuracy GPS coordinates, creates a Priority 98 Critical police duress ticket, and suppresses audio/chimes on the device so the attacker is not alerted.
+1. **🔕 Covert Physical Duress Sensors & Silent Police SOS (No Screen Looking Required)**:
+   - **The Problem**: In hostage situations, domestic violence, stalking, or burglary intrusions, victims **cannot speak out loud** or even safely look at their screen to tap a button.
+   - **The Solution**: Multi-modal physical gesture detection:
+     - 🖐️ **Covert 2.5s Pocket Hold**: Pressing and holding the screen continuously for 2.5 seconds (even through pocket fabric) triggers a silent duress dispatch.
+     - ⚡ **Rapid Triple-Tap**: Tapping rapidly 3 times anywhere on the screen triggers silent police assistance.
+     - 📱 **Panic Motion Accelerometer**: Violent physical struggle or device shaking (`DeviceMotionEvent`) automatically transmits coordinates.
+     - 📳 **Covert Haptic Feedback**: Vibrates twice silently in the victim's hand (`navigator.vibrate([120, 80, 120])`) so they feel reassurance that police are en route without making a single sound.
 
 2. **🩺 Pre-Arrival Life Support Guidance ("The Golden 5 Minutes")**:
    - **The Problem**: Brain death occurs within 4–6 minutes of cardiac arrest or fatal hemorrhage, while ambulances take 8–12 minutes to arrive. Panicked callers feel helpless.
