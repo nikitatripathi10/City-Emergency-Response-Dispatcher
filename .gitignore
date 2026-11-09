@@ -1,5 +1,15 @@
 node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
 .DS_Store
 Thumbs.db
 .env
-
+.env.local
+.env.*.local
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+functions/lib/
+functions/node_modules/

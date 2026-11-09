@@ -559,6 +559,130 @@ button.submit:active { transform: translateY(0); }
 
 #map { border-radius: 10px; border: 1px solid var(--border); }
 
+/* ============ HELPLINE BANNER ============ */
+.helpline-banner {
+  background: linear-gradient(90deg, rgba(185, 28, 28, 0.92), rgba(153, 27, 27, 0.95));
+  color: #fff; padding: 8px 24px; font-size: 12px; font-weight: 700;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+  border-bottom: 1px solid rgba(248, 113, 113, 0.45); letter-spacing: 0.5px;
+  position: relative; z-index: 120;
+}
+.helpline-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.helpline-pill {
+  color: #fff; text-decoration: none; background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.35); padding: 3px 10px;
+  border-radius: 14px; font-size: 11px; font-weight: 700;
+  transition: background 0.15s;
+}
+.helpline-pill:hover, .helpline-pill.urgent {
+  background: #fff; color: #991b1b;
+}
+
+/* ============ FORM EXTENSIONS & VULNERABILITY FLAGS ============ */
+.form-row-2col {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.vuln-flags {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px; margin-top: 6px;
+}
+.vuln-label {
+  display: flex; align-items: center; gap: 8px; font-size: 12px;
+  background: var(--surface2); border: 1px solid var(--border);
+  padding: 8px 10px; border-radius: 8px; cursor: pointer;
+}
+.vuln-label input[type="checkbox"] {
+  width: 15px; height: 15px; accent-color: var(--accent);
+}
+.consent-line {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin-top: 14px; font-size: 12px; color: var(--muted); cursor: pointer;
+}
+.consent-line input[type="checkbox"] {
+  width: 16px; height: 16px; margin-top: 2px; accent-color: var(--accent);
+}
+
+/* ============ SIDE STACK, UNITS, OPERATIONS MAP & ANALYTICS ============ */
+.side-stack { display: flex; flex-direction: column; gap: 20px; }
+.units-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.unit-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+}
+.unit-create-form { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.operations-map {
+  height: 360px; width: 100%; border-radius: 10px; border: 1px solid var(--border);
+}
+.dashboard-controls {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+}
+.dash-search { width: 220px; padding: 6px 12px; font-size: 12px; }
+.dash-sort { width: 190px; padding: 6px 10px; font-size: 12px; }
+.pagination-bar {
+  display: flex; justify-content: center; margin-top: 22px;
+}
+
+.analytics-kpi-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px; margin-bottom: 20px;
+}
+.kpi-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px; text-align: center;
+}
+.kpi-val {
+  font-family: var(--font-head); font-size: 1.7rem; font-weight: 700; color: var(--accent);
+}
+.kpi-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.analytics-bars { display: flex; flex-direction: column; gap: 10px; }
+.bar-row { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.bar-name { width: 80px; font-weight: 600; }
+.bar-track {
+  flex: 1; height: 10px; background: var(--surface2); border-radius: 6px; overflow: hidden;
+}
+.bar-fill { height: 100%; border-radius: 6px; background: var(--accent); }
+.bar-fire     { background: var(--fire); }
+.bar-medical  { background: var(--medical); }
+.bar-accident { background: var(--accident); }
+.bar-police   { background: var(--police); }
+.bar-minor    { background: var(--minor); }
+.bar-count { width: 80px; text-align: right; color: var(--muted); font-size: 12px; }
+
+.timeline-list {
+  display: flex; flex-direction: column; gap: 10px;
+  max-height: 300px; overflow-y: auto; margin-bottom: 18px;
+}
+.timeline-row {
+  background: var(--surface2); border-left: 3px solid var(--accent);
+  padding: 8px 12px; border-radius: 6px; font-size: 13px;
+}
+.table-wrap { overflow-x: auto; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.admin-table th, .admin-table td {
+  padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left;
+}
+.admin-table select { width: auto; padding: 5px 10px; font-size: 12px; }
+
+.critical {
+  background: rgba(244, 63, 94, 0.25); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.55);
+}
+
+/* ============ WCAG REDUCED MOTION SUPPORT ============ */
+@media (prefers-reduced-motion: reduce) {
+  .scanlines { display: none !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+body.reduced-motion .scanlines { display: none !important; }
+body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
 @media (max-width: 600px) {
   .navbar { padding: 12px 16px; }
   .status-bar { padding: 10px 16px; }
