@@ -1854,22 +1854,64 @@ function setupCovertPhysicalSensors() {
   });
 }
 
-  if ("geolocation" in navigator) {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        submitSosWithCoords({
-          lat: Math.round(pos.coords.latitude * 1000000) / 1000000,
-          lng: Math.round(pos.coords.longitude * 1000000) / 1000000,
-        });
-      },
-      () => {
-        submitSosWithCoords(selectedCoords || { lat: 28.6139, lng: 77.209 });
-      },
-      { timeout: 5000, enableHighAccuracy: true }
-    );
-  } else {
-    submitSosWithCoords(selectedCoords || { lat: 28.6139, lng: 77.209 });
+// ============ VOICE SOS SPEECH-TO-TEXT DICTATION ============
+function setupVoiceDictation() {
+  const btn = document.getElementById("voiceDictateBtn");
+  const txt = document.getElementById("voiceDictateText");
+  const desc = document.getElementById("description");
+  if (!btn || !desc) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    btn.addEventListener("click", () => {
+      showToast("Speech recognition not supported in this browser. Please type emergency details.", "warning");
+    });
+    return;
   }
+
+  const recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  let isRecording = false;
+
+  btn.addEventListener("click", () => {
+    if (isRecording) {
+      recognition.stop();
+      return;
+    }
+    try {
+      recognition.lang = lang === "hi" ? "hi-IN" : "en-US";
+      recognition.start();
+      isRecording = true;
+      btn.classList.add("recording");
+      if (txt) txt.textContent = "Listening...";
+      showToast("🎙️ Listening... Speak your emergency details clearly.", "info");
+    } catch (err) {
+      showToast(`Mic error: ${err.message}`, "error");
+    }
+  });
+
+  recognition.onresult = (event) => {
+    const transcript = event.results?.[0]?.[0]?.transcript || "";
+    if (transcript) {
+      desc.value = desc.value ? `${desc.value.trim()} ${transcript}` : transcript;
+      showToast(`Captured: "${transcript}"`, "success");
+    }
+  };
+
+  recognition.onerror = (event) => {
+    isRecording = false;
+    btn.classList.remove("recording");
+    if (txt) txt.textContent = "Speak Emergency";
+    showToast(`Speech error: ${event.error}`, "warning");
+  };
+
+  recognition.onend = () => {
+    isRecording = false;
+    btn.classList.remove("recording");
+    if (txt) txt.textContent = "Speak Emergency";
+  };
 }
 
 // ============ 3. SPATIAL-TEMPORAL DUPLICATE INCIDENT DETECTION ============
@@ -2643,6 +2685,9 @@ function initApp() {
 
   // COVERT PHYSICAL SENSORS ACTIVE (Pocket hold 2.5s / Triple-tap / Accelerometer shake / Key duress)
   setupCovertPhysicalSensors();
+
+  // VOICE SOS SPEECH-TO-TEXT DICTATION
+  setupVoiceDictation();
 
   // PRE-ARRIVAL FIRST AID PROTOCOLS ("THE GOLDEN 5 MINUTES")
   renderFirstAidGuidance("cpr");

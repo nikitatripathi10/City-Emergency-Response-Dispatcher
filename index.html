@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <title>City Emergency Response System (CERS)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#040b18">
+<meta name="theme-color" content="#070a13">
 <meta name="description" content="Real-time City Emergency Response & Dispatch Platform with GIS mapping, automated priority triage, and multi-role coordination.">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://firebasestorage.googleapis.com https://unpkg.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://nominatim.openstreetmap.org https://photon.komoot.io; object-src 'none'; base-uri 'self';">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous"/>
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -264,8 +264,14 @@
         <label class="field-label" for="distance">📏 Distance from Control Room (km, auto-calculated from coordinates)</label>
         <input id="distance" placeholder="Auto-computed from coordinates (or enter km)" type="number" min="0" max="500" step="0.1" value="3.5" required>
 
-        <label class="field-label" for="description">📝 Incident Description</label>
-        <textarea id="description" placeholder="Describe the emergency situation, hazards, and landmarks..." rows="3" minlength="5" maxlength="2000" required></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;margin-bottom:4px">
+          <label class="field-label" for="description" style="margin:0">📝 Incident Description</label>
+          <button type="button" id="voiceDictateBtn" class="voice-btn" title="Speak to Dictate Emergency (Speech-to-Text)">
+            <span class="mic-icon" aria-hidden="true">🎙️</span>
+            <span id="voiceDictateText">Speak Emergency</span>
+          </button>
+        </div>
+        <textarea id="description" placeholder="Describe the emergency situation, hazards, and landmarks (or tap 🎙️ Speak Emergency)..." rows="3" minlength="5" maxlength="2000" required></textarea>
 
         <label class="field-label" for="image">📷 Attach Photo (optional, JPEG/PNG/WebP max 5MB)</label>
         <div class="file-drop" id="fileDrop" tabindex="0" role="button" aria-label="Attach photo by clicking or dragging an image">
